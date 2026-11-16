@@ -198,10 +198,10 @@ deployer_charts() {
 }
 
 verifier_sante() {
-  local hote essai
+  local hote
   hote="$(kubectl get ingress urbankiff-api -n "$NAMESPACE" -o jsonpath='{.spec.rules[0].host}')"
   [[ "$hote" =~ ^[a-z0-9.-]+$ ]] || die "hôte de l'Ingress urbankiff-api illisible"
-  for essai in $(seq 1 24); do
+  for _ in $(seq 1 24); do
     if curl -fsS --max-time 5 -o /dev/null "https://$hote/api/health/"; then
       log "santé de l'api confirmée"
       return 0
