@@ -110,9 +110,10 @@ numero() { grep -n -m1 -- "$1" "$FAKE_LOG" | cut -d: -f1; }
 }
 
 @test "aucun secret ne figure dans le journal des appels ni la sortie" {
-  sed -i 's|^SECRET_KEY=.*|SECRET_KEY=Valeur-Repere-Xq7=avec espace|' "$ENTREE"
+  repere='Valeur-Repere-Xq7=avec espace'
+  sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$repere|" "$ENTREE"
   deployer
-  ! grep -qF 'Valeur-Repere-Xq7' "$FAKE_LOG"
-  [[ "$output" != *"Valeur-Repere-Xq7"* ]]
+  ! grep -qF "$repere" "$FAKE_LOG"
+  [[ "$output" != *"$repere"* ]]
   ! grep -q 'valeur-SMTP_PASSWORD' "$FAKE_LOG"
 }
