@@ -47,7 +47,7 @@ par `--set reseau.apiKubernetes.cidr=...` (pas au chart `urbankiff`).
 
 Entrée standard facultative, au plus 64 Ko, lignes `NOM=valeur` : les noms de `scripts/secrets/secrets.txt` forment le
 Secret `urbankiff-secrets`, ceux de `scripts/secrets/variables-<env>.txt` la ConfigMap `urbankiff-config` (tous
-obligatoires, non vides). `WASABI_REGION` et `WASABI_BUCKET` sont de plus passés au chart (`--set wasabi.region=…`).
+obligatoires, non vides). `WASABI_REGION` et `WASABI_BUCKET` sont de plus passés au chart `urbankiff-donnees` (`--set wasabi.region=…`), qui sauvegarde la base et les fichiers dans Wasabi.
 Sans entrée, le script réutilise le Secret et la ConfigMap du namespace et refuse s'ils manquent (« premier
 déploiement »). L'empreinte `secretsChecksum` (SHA-256 tronquée, secrets et variables) force le redémarrage des pods
 quand une valeur change. Aucune valeur n'est jamais en argument, journalisée ni écrite sur disque.
