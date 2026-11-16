@@ -62,10 +62,15 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            # RustFS écrit ses journaux dans /logs : la racine est en lecture seule
+            - name: journaux
+              mountPath: /logs
             - name: donnees
               mountPath: /data
       volumes:
         - name: tmp
+          emptyDir: {}
+        - name: journaux
           emptyDir: {}
   volumeClaimTemplates:
     - metadata:
