@@ -50,7 +50,7 @@ et sur les serveurs sont faites ou autorisées par le développeur.
 
 ## Avancement
 
-Statut : 🟡 en cours (tâches 1 à 6 ✅ le 2026-11-16, tâche 7 en cours) · Prochaine tâche : 7 (PR d essai)
+Statut : 🟡 en cours (tâches 1 à 7 ✅ le 2026-11-16) · Prochaine tâche : 8 (révocations, après la saisie des vraies valeurs)
 
 - [x] **Tâche 1** Script de définition des secrets
 - [x] **Tâche 2** Inventaire et runbook
@@ -58,11 +58,11 @@ Statut : 🟡 en cours (tâches 1 à 6 ✅ le 2026-11-16, tâche 7 en cours) · 
 - [x] **Tâche 4** Scan gitleaks
 - [x] **Tâche 5** Mesures conservatoires sur A et B (développeur)
 - [x] **Tâche 6** Instantané et nouveau dépôt public
-- [ ] **Tâche 7** Configuration GitHub et rotation
+- [x] **Tâche 7** Configuration GitHub et rotation (2026-11-16)
 - [ ] **Tâche 8** Révocations chez les fournisseurs (développeur)
 - [ ] **Tâche 9** Clones locaux et vérification finale
 
-> Reprise : 2026-11-16, branche chore/publication du checkout principal, rien de commité. Tâches 1 à 4 faites, revue finale corrigée (FCM, prodseed, idempotence, journal Docker, inventaire, Caddy). Tâche 5 : A et B terminés le 2026-11-16 (services arrêtés, pare-feu 22 seul, connexion SSH par mot de passe désactivée, clé de déploiement retirée), projet Firebase supprimé : tâche 5 terminée. Tâche 6 : instantané publié le 2026-11-16 (tigamadou/urbankiff public, archive privée). Tâche 7 : environnements prod et preprod créés, 14 secrets et 18 variables chacun, development et main protégées (ci-ok, enforce_admins) ; reste la PR d essai.
+> Reprise : 2026-11-16, branche chore/publication du checkout principal, rien de commité. Tâches 1 à 4 faites, revue finale corrigée (FCM, prodseed, idempotence, journal Docker, inventaire, Caddy). Tâche 5 : A et B terminés le 2026-11-16 (services arrêtés, pare-feu 22 seul, connexion SSH par mot de passe désactivée, clé de déploiement retirée), projet Firebase supprimé : tâche 5 terminée. Tâche 6 : instantané publié le 2026-11-16 (tigamadou/urbankiff public, archive privée). Tâche 7 : environnements prod et preprod créés, 14 secrets et 18 variables chacun, development et main protégées (ci-ok, enforce_admins). GitHub Actions bloqué un temps : ci-ok retiré puis rétabli le 2026-11-16 une fois Actions revenu ; la PR d essai est remplacée par les PR de la mission k3s-ansible (#19 à #35), toutes avec ci-ok vert sur un runner GitHub : tâche 7 terminée. Les valeurs des fournisseurs (SMTP, Twilio, Google) restent provisoires : elles sont saisies avant la tâche 8.
 
 Statuts : ⬜ à faire · 🟡 en cours · ✅ terminé. Cocher une case **seulement après vérification verte**.
 
