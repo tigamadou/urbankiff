@@ -37,7 +37,7 @@ jobs:
           {
             echo "version=${BASH_REMATCH[1]}"
             echo "environnement=$environnement"
-            echo "sha=${SHA:0:12}"
+            echo "sha=$SHA"
           } >> "$GITHUB_OUTPUT"
 
   images:
@@ -119,6 +119,7 @@ jobs:
           ENVIRONNEMENT: ${{ needs.meta.outputs.environnement }}
         run: |
           set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "variable DEPLOY_HOST absente ou invalide" >&2; exit 1; }
           noms() { grep -vE '^(#|$)' "$1" | sed -E 's/[ =].*//' | jq -R . | jq -s .; }
           filtrer() { jq -r --argjson noms "$2" '. as $v | $noms[] | select($v[.] != null and $v[.] != "") | "\(.)=\($v[.])"'; }
           {

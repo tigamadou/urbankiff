@@ -63,3 +63,12 @@ setup() { WF="$BATS_TEST_DIRNAME/../../../.github/workflows/deploiement.yml"; }
   grep -q 'environnement=prod' "$WF"
   grep -q 'tag de release attendu : vX.Y.Z (sans suffixe)' "$WF"
 }
+
+@test "le SHA exposé par meta est complet (ref de checkout), jamais tronqué" {
+  grep -q 'echo "sha=$SHA"' "$WF"
+  ! grep -q 'SHA:0:' "$WF"
+}
+
+@test "DEPLOY_HOST validé avant ssh" {
+  awk '/DEPLOY_HOST" =~|DEPLOY_HOST.*\^\[A-Za-z0-9\.-\]/ {v=NR} /ssh -i/ {s=NR} END {exit !(v && s && v<s)}' "$WF"
+}

@@ -99,6 +99,9 @@ contrôle `https://<hôte de l'Ingress urbankiff-api>/api/health/` pendant deux 
 ## Rollback
 
 - `--atomic` annule seul une mise à jour de l'application qui n'atteint pas l'état prêt.
+- Le Secret `urbankiff-secrets` et le ConfigMap `urbankiff-config` sont appliqués avant `helm --atomic` : si la mise à jour
+  échoue et est annulée, ils gardent leurs nouvelles valeurs (Helm ne les gère pas). Les corriger en redéployant la
+  version précédente avec les valeurs précédentes.
 - Version défaillante constatée après coup : redéployer la version précédente (`make deploiement ENV=<env> VERSION=<précédente>`,
   ou publier de nouveau sa release).
 - Sur le serveur, `helm rollback urbankiff -n <namespace>` est possible, mais le script de déploiement reste la voie
