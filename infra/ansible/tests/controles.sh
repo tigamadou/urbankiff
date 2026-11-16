@@ -29,4 +29,7 @@ done
 grep -q 'resources: \[replicasets\]' roles/deploiement/defaults/main.yml \
     || { echo "ECHEC roles/deploiement/defaults/main.yml : lecture des replicasets absente"; echec=1; }
 
+grep -q '^preprod_quota_memoire_limites: 3Gi$' group_vars/all.yml \
+    || { echo "ECHEC group_vars/all.yml : quota de preprod différent de infra/helm/tests-transverses/controle.rb (3Gi)"; echec=1; }
+
 exit $echec

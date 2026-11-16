@@ -126,15 +126,17 @@ Limites mémoire des valeurs `values-<env>.yaml` (spec § 5.4), requêtes / limi
 | Job de migrations | 200 / 512 Mi | 128 / 256 Mi |
 | Jobs et CronJob rclone | 32 / 128 Mi | 32 / 128 Mi |
 
-Quota de la preprod : **2 Gio** de limites mémoire et 1,5 Gio de requêtes, créé par le rôle `plateforme` d'Ansible
-(A9). La somme des limites de la preprod en régime établi est de **1 728 Mi** (celle du tableau de la spec, qui dépasse
-1,5 Gio) ; le Job de migrations (256 Mi, la limite la plus basse que le chart retient pour qu'il tienne) s'y ajoute, soit
-1 984 Mi. Le contrôle transverse de `make helm-test` échoue si cette somme dépasse 2 048 Mi.
+Quota de la preprod : **3 Gio** de limites mémoire et 1,5 Gio de requêtes, créé par le rôle `plateforme` d'Ansible
+(A9, relevé de 2 à 3 Gio par A18 au premier déploiement réel). La somme des limites de la preprod en régime établi est de
+**1 728 Mi** ; s'y ajoutent sur le cluster le conteneur auxiliaire Barman Cloud du pod PostgreSQL (256 Mi, posé par
+l'opérateur : 1 984 Mi constatés), un pod de plus pendant une mise à jour progressive (384 Mi, le plus gros Deployment)
+et le plus gros Job (256 Mi), soit **2 624 Mi**. Le contrôle transverse de `make helm-test` échoue si cette somme
+dépasse 3 072 Mi. Avec 2 Gio, le Job de bucket (crochet `post-upgrade` du chart des données, qui tourne alors que
+l'application est en place) était refusé par le quota.
 
 Marge assumée : le Job de migrations (crochet de déploiement) et le CronJob rclone (128 Mi, planifié à 03:30,
-`concurrencyPolicy: Forbid`, donc au plus une instance) peuvent se chevaucher exceptionnellement, soit 2 112 Mi pour un
-quota de 2 048 Mi. Le Job de bucket est un crochet du chart des données, terminé avant le déploiement des applications.
-En cas de dépassement, le quota refuse la création du pod : le Job de migrations est relancé (`backoffLimit`) et le
+`concurrencyPolicy: Forbid`, donc au plus une instance) peuvent se chevaucher exceptionnellement ; le pire cas est
+affiché par le contrôle transverse et reste sous le quota de 3 072 Mi. En cas de dépassement, le quota refuse la création du pod : le Job de migrations est relancé (`backoffLimit`) et le
 CronJob rclone saute son tour. Le contrôle transverse vérifie `Forbid` et affiche ce pire cas. Éviter de déployer la
 preprod autour de 03:30.
 

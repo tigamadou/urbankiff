@@ -5,7 +5,9 @@ require 'yaml'
 
 SECRETS_INVENTAIRE = '/charts/tests-transverses/secrets-inventaire.txt'
 # Quota de la preprod (spec § 8.5, A9) en Mi : posé par le rôle plateforme d'Ansible, pas par les charts
-QUOTA_PREPROD_MI = 2048
+QUOTA_PREPROD_MI = 3072
+# Conteneur auxiliaire du plugin Barman Cloud ajouté par l'opérateur au pod PostgreSQL (limite constatée sur le cluster)
+AUXILIAIRE_BARMAN_MI = 256
 CIDR_POD = '10.42.0.0/16'
 CIDR_SERVICE = '10.43.0.0/16'
 NAMESPACES_AUTORISES = %w[kube-system cnpg-system].freeze
@@ -203,9 +205,11 @@ regime = docs.sum do |d|
   end
 end
 plus_gros_job = pods(docs).select { |_, _, _, k| %w[Job CronJob].include?(k) }.flat_map { |_, spec, _, _| conteneurs(spec).map { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
-puts "limites en régime établi : #{regime} Mi ; plus gros Job : #{plus_gros_job} Mi ; quota : #{QUOTA_PREPROD_MI} Mi"
-total = regime + plus_gros_job
-verifie 'preprod : limites mémoire en régime établi plus le plus gros Job sous le quota',
+# Mise à jour progressive : un pod de plus que le régime établi pendant le remplacement (maxSurge 1 par défaut).
+surplus = docs.select { |d| d['kind'] == 'Deployment' }.map { |d| d['spec']['template']['spec']['containers'].sum { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
+puts "limites en régime établi : #{regime} Mi ; auxiliaire Barman : #{AUXILIAIRE_BARMAN_MI} Mi ; pod de mise à jour : #{surplus} Mi ; plus gros Job : #{plus_gros_job} Mi ; quota : #{QUOTA_PREPROD_MI} Mi"
+total = regime + AUXILIAIRE_BARMAN_MI + surplus + plus_gros_job
+verifie 'preprod : régime établi, auxiliaire Barman, pod de mise à jour et plus gros Job sous le quota',
         total <= QUOTA_PREPROD_MI ? [] : ["#{total} Mi > #{QUOTA_PREPROD_MI} Mi"]
 
 # Marge assumée : le Job de migrations (crochet de déploiement) et le CronJob rclone (planifié la nuit) peuvent se

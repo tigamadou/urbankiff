@@ -27,6 +27,6 @@ reseaux_internes_k3s:
   - 10.42.0.0/16
   - 10.43.0.0/16
 
-# Quota de preprod (spec 8.5, A9)
-preprod_quota_memoire_limites: 2Gi
+# Quota de preprod (spec 8.5, A9 et A18)
+preprod_quota_memoire_limites: 3Gi
 preprod_quota_memoire_requetes: 1536Mi

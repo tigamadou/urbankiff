@@ -145,7 +145,7 @@ Le rôle n'applique jamais d'URL distante : seuls les fichiers vendus dans `role
   dans ce lot) ; la mise en service réelle les valide.
 - Compatibilité à vérifier à la mise en service : la version du plugin Barman Cloud doit être compatible avec celle
   de l'opérateur CloudNativePG (voir les notes de version du plugin) ; les deux sont épinglées dans `group_vars/all.yml`.
-- Les namespaces, le quota de `preprod` (2 Gio de limites, 1,5 Gio de requêtes) et le `LimitRange` sont créés par le
+- Les namespaces, le quota de `preprod` (3 Gio de limites, 1,5 Gio de requêtes) et le `LimitRange` sont créés par le
   rôle `plateforme` ; le compte `deploy` ne peut pas les modifier.
 - `deploy.<env>.env` remplace le `deploy.env` unique du contrat initial (arbitrage A8 de la spec).
 - `API_SERVER_CIDR=<IP>/32` de `deploy.<env>.env` est l'IP du nœud k3s : `api_server_ip` dans `deploiement_envs.<env>` de l'inventaire, sinon `ansible_default_ipv4.address`. Le script de déploiement la passe au chart (`reseau.apiKubernetes.cidr`).
