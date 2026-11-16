@@ -60,7 +60,7 @@ tests:
           content:
             name: RUSTFS_ADDRESS
             value: 0.0.0.0:9000
-  - it: volumes /data et /tmp, lecture seule, durcissement, sondes, limites, empreinte
+  - it: volumes /data, /tmp et /logs, lecture seule, durcissement, sondes, limites, empreinte
     template: templates/rustfs.yaml
     documentIndex: 0
     set:
@@ -76,6 +76,16 @@ tests:
           content:
             name: tmp
             mountPath: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: journaux
+            mountPath: /logs
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: journaux
+            emptyDir: {}
       - equal:
           path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
           value: true
