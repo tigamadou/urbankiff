@@ -7,3 +7,5 @@ apps/backup_service/.env*
 apps/backup_service/backups/
 .coverage-diff/
 .DS_Store
+infra/ansible/inventory.yml
+infra/**/.travail/
