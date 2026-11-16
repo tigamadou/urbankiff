@@ -49,19 +49,19 @@ const HomePage = async () => {
 
   // Fetch with Next.js caching and error handling
   const musiquesPosts = await safeFetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchcategorypostdata?name=musiques&last_post=0&language=fr`,
+    `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchcategorypostdata?name=musiques&last_post=0&language=fr`,
   );
 
   const ciposts2 = await safeFetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchcategorypostdata?name=cinema&last_post=0&language=fr`,
+    `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchcategorypostdata?name=cinema&last_post=0&language=fr`,
   );
 
   const viposts2 = await safeFetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchcategorypostdata?name=videos&last_post=0&language=fr`,
+    `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchcategorypostdata?name=videos&last_post=0&language=fr`,
   );
 
   const tops2 = await safeFetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchmostview/fr/lol`,
+    `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchmostview/fr/lol`,
   );
 
   return (

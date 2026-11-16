@@ -16,7 +16,7 @@ interface PostCategoriesProps {
 
 const PostCategories: React.FC<PostCategoriesProps>  = async ({ categoryName, categorySlug, language= 'fr', page=1 }) => {
   const limit = 12;
-  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/posts?category=${categorySlug}&language=${language}&page=${page}&limit=${limit}`;
+  const url = `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/posts?category=${categorySlug}&language=${language}&page=${page}&limit=${limit}`;
 
   try {
     const data = await fetch(url, {
