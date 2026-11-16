@@ -73,12 +73,13 @@ Avant de lancer le script, créer chez chaque fournisseur la nouvelle valeur (sa
 > posées avec `SEULEMENT="<noms>" make secrets-definir ENV=<env> REPO=tigamadou/urbankiff` avant le premier
 > déploiement. Les révocations de la section 4 attendent ces nouvelles valeurs.
 
-> État au 2026-11-16 : GitHub Actions ne crée aucune exécution sur le compte (quota inclus du mois épuisé, aucune
-> cause trouvée côté dépôt ni côté budget). Le check obligatoire `ci-ok` a été **retiré temporairement** de la
-> protection de `development` et `main` (force push et suppression restent interdits).
+> État au 2026-11-16 : GitHub Actions a cessé un temps de créer des exécutions sur le compte ; le check obligatoire
+> `ci-ok` avait été retiré temporairement de la protection de `development` et `main`. Actions fonctionne de nouveau
+> (les PR de la mission k3s-ansible ont `ci-ok` vert) et `ci-ok` est rétabli sur les deux branches (non strict,
+> appliqué aux admins ; force push et suppression toujours interdits).
 
-- [ ] Actions de nouveau fonctionnel (une PR déclenche `CI devteam`) et `ci-ok` rétabli comme check obligatoire sur
-      `development` et `main` — date :
+- [x] Actions de nouveau fonctionnel (une PR déclenche `CI devteam`) et `ci-ok` rétabli comme check obligatoire sur
+      `development` et `main` — date : 2026-11-16
 
 ## 4. Révocations
 

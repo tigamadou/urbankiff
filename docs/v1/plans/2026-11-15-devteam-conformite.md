@@ -27,7 +27,7 @@ devteam.
 
 ## Avancement
 
-Statut : ✅ terminé (sauf `ci-ok`, en attente : GitHub Actions bloquées par la facturation)
+Statut : ✅ terminé (`ci-ok` vert et imposé sur `development` et `main` depuis le 2026-11-16)
 
 - [x] **Tâche 1** Migrations manquantes (2026-11-15)
 - [x] **Tâche 2** flake8 de l'api (2026-11-15)
@@ -41,7 +41,7 @@ Statut : ✅ terminé (sauf `ci-ok`, en attente : GitHub Actions bloquées par l
 - [x] **Tâche 10** Configuration d'agent et adaptateurs (2026-11-15)
 - [x] **Tâche 11** `compose.agent.yml` et cibles standard dans un worktree d'agent (2026-11-15)
 - [x] **Tâche 12** Mesure du budget (2026-11-15)
-- [~] **Tâche 13** Vérification (2026-11-15 : tout vert ; `ci-ok` en attente)
+- [x] **Tâche 13** Vérification (2026-11-15 : tout vert ; 2026-11-16 : `ci-ok` vert sur les PR et imposé)
 
 > Reprise (2026-11-15) : PR #48 (remise au vert, garde-fou, coverage-diff, environnement d'agent, budget) fusionnée
 > dans `development`, migrations appliquées à la stack principale. **Tâche 3** : décisions du développeur :
