@@ -5,3 +5,12 @@
 ## Dirs
 env/
 
+
+## Jamais dans l'image
+.env.*
+**/__pycache__
+.vscode
+media/
+staticfiles/
+.git
+*.md
