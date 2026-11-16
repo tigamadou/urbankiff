@@ -33,7 +33,7 @@ la mission `k3s-ansible`, lot 3 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 4
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Point de santé `/api/health/` · `feature/k3s-ansible-api-prod`
   - [x] Tests (200 avec la vraie base de test, 405, public, 503 base injoignable) écrits et vus en échec
@@ -47,7 +47,7 @@ Statut : ⬜ à faire · Prochaine tâche : 4
   - [x] Construction des deux cibles
   - [x] Étape `prod` : non root, `/tmp` seul en écriture
   - [x] Dernière étape identique à l'image actuelle
-- [ ] **Tâche 4** Vérification du lot
+- [x] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
 
