@@ -28,7 +28,7 @@ version_pg_du_dump() {
     erreur "dump introuvable ou illisible : ${dump:-<vide>}"
     return 1
   fi
-  if ! sortie=$(docker run --rm -i --network none "$PG_CLIENT_IMAGE" pg_restore -l < "$dump" 2>&1); then
+  if ! sortie=$(docker run --rm -i --network none --cap-drop ALL --security-opt no-new-privileges --read-only "$PG_CLIENT_IMAGE" pg_restore -l < "$dump" 2>&1); then
     case "$sortie" in
       *"unsupported version"*) erreur "dump plus récent que le client PostgreSQL épinglé ($PG_CLIENT_IMAGE) : $dump" ;;
       *) erreur "dump illisible (format custom attendu) : $dump" ;;
@@ -186,7 +186,7 @@ analyser_bucket() {
     return 1
   fi
   image_outils
-  COPYFILE_DISABLE=1 tar -C "$1" -cf - . | docker run --rm -i --network none --label "$REST_LABEL" "$IMAGE_OUTILS" \
+  COPYFILE_DISABLE=1 tar -C "$1" -cf - . | docker run --rm -i --network none --cap-drop ALL --security-opt no-new-privileges --label "$REST_LABEL" "$IMAGE_OUTILS" \
     sh -c "$(printf 'set -e\nmkdir /b\ntar -xf - -C /b\n'; cat "$RESTAURATION_DIR/analyser-bucket.sh")"
 }
 
