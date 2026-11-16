@@ -39,6 +39,8 @@
   loop_control:
     label: "{{ item.item.key }}"
   vars:
+    deploiement_env: "{{ item.item.key }}"
+    deploiement_namespace: "{{ item.item.value.namespace }}"
     deploiement_jeton: "{{ item.stdout_lines[0] | b64decode }}"
     deploiement_ca: "{{ item.stdout_lines[1] }}"
   no_log: true
