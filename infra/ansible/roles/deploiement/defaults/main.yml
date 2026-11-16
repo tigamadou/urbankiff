@@ -21,6 +21,10 @@ deploiement_role_regles:
   - apiGroups: [apps]
     resources: [deployments, deployments/scale, statefulsets, statefulsets/scale]
     verbs: "{{ deploiement_verbes_ecriture }}"
+  # helm --wait suit les Deployments par leurs ReplicaSets
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: "{{ deploiement_verbes_lecture }}"
   - apiGroups: [batch]
     resources: [jobs, cronjobs]
     verbs: "{{ deploiement_verbes_ecriture }}"
