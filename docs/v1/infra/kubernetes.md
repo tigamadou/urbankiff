@@ -70,7 +70,7 @@ sortie.
 | --- | --- | --- | --- | --- |
 | `default-deny` | donnees | tous | tout refusé (entrée et sortie) | — |
 | `autoriser-dns` | donnees | tous | → CoreDNS (`kube-system`) | 53 UDP et TCP |
-| `postgres-entree` | donnees | PostgreSQL | api, workers, migrations, restauration → PostgreSQL ; opérateur (`plateforme`) → PostgreSQL | 5432 ; 5432 et 8000 |
+| `postgres-entree` | donnees | PostgreSQL | api, workers, migrations, restauration → PostgreSQL ; pods de l'opérateur (namespace `reseau.namespacePlateforme`) → PostgreSQL | 5432 ; 8000 |
 | `redis-entree` | donnees | Redis | api, workers, migrations → Redis | 6379 |
 | `rustfs-entree` | donnees | RustFS | api, workers, migrations, rustfs-bucket, sauvegarde-fichiers, restauration → RustFS | 9000 |
 | `postgres-sortie` | donnees | PostgreSQL | → Wasabi (Internet hors `cidrExclus`) ; → API Kubernetes (hors plages pod et service) | 443 ; 6443 |
@@ -94,10 +94,18 @@ Points à connaître :
   figées à la construction et égales à l'URL publique de l'api : si le rendu serveur appelle cette URL publique, la sortie
   est refusée. À vérifier au premier déploiement ; la solution (sortie 443 pour Next, ou URL interne à la construction)
   relève du lot `fronts-prod` ou d'une décision du développeur.
-- L'API Kubernetes est jointe sur le port 6443 de l'hôte (`reseau.apiKubernetes`, adresse `0.0.0.0/0` hors plages pod
-  et service par défaut). Pour la restreindre, passer `reseau.apiKubernetes.cidr=<IP du nœud>/32`.
-- L'entrée de l'opérateur CloudNativePG vise tout le namespace `plateforme` (pas de `podSelector`) ; restreindre aux pods
-  de l'opérateur est possible une fois leur libellé confirmé.
+- L'API Kubernetes est jointe sur le port 6443 de l'hôte. `reseau.apiKubernetes.cidr` n'a **pas de défaut** : le
+  déploiement doit passer l'IP du nœud en `/32` (`--set reseau.apiKubernetes.cidr=<IP>/32`), le chart échoue sinon et
+  refuse toute valeur qui n'est pas en `/32` (jamais `0.0.0.0/0`). La règle n'a pas de `except` : une seule IP, et un
+  `except` hors du `cidr` serait refusé par Kubernetes. Les cibles `make helm-*` utilisent `NOEUD_CIDR` (défaut
+  `192.0.2.10/32`, adresse de documentation).
+- L'entrée de l'opérateur CloudNativePG combine `namespaceSelector` (`reseau.namespacePlateforme`) et `podSelector`
+  `app.kubernetes.io/name: cloudnative-pg` (étiquette des pods `cnpg-controller-manager`, vérifiée dans le manifeste
+  vendu du lot ansible), sur le seul port 8000 (API de statut de l'instance). Le port 5432 n'est pas ouvert à
+  l'opérateur. Le plugin Barman Cloud (étiquette `app: barman-cloud`) n'initie aucune connexion vers les pods
+  PostgreSQL : son conteneur auxiliaire tourne dans le pod et la sortie vers Wasabi est déjà portée par `postgres-sortie`.
+  Le namespace où tourne l'opérateur (`plateforme` selon la spec § 5.1, `cnpg-system` dans les manifestes du lot ansible)
+  reste à arbitrer : il se règle par `reseau.namespacePlateforme`.
 
 ## Ressources et quota
 
@@ -119,6 +127,13 @@ Quota de la preprod : **2 Gio** de limites mémoire et 1,5 Gio de requêtes, cr�
 (A9). La somme des limites de la preprod en régime établi est de **1 728 Mi** (celle du tableau de la spec, qui dépasse
 1,5 Gio) ; le Job de migrations (256 Mi, la limite la plus basse que le chart retient pour qu'il tienne) s'y ajoute, soit
 1 984 Mi. Le contrôle transverse de `make helm-test` échoue si cette somme dépasse 2 048 Mi.
+
+Marge assumée : le Job de migrations (crochet de déploiement) et le CronJob rclone (128 Mi, planifié à 03:30,
+`concurrencyPolicy: Forbid`, donc au plus une instance) peuvent se chevaucher exceptionnellement, soit 2 112 Mi pour un
+quota de 2 048 Mi. Le Job de bucket est un crochet du chart des données, terminé avant le déploiement des applications.
+En cas de dépassement, le quota refuse la création du pod : le Job de migrations est relancé (`backoffLimit`) et le
+CronJob rclone saute son tour. Le contrôle transverse vérifie `Forbid` et affiche ce pire cas. Éviter de déployer la
+preprod autour de 03:30.
 
 ## Durcissement
 
