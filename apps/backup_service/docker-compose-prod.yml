@@ -1,0 +1,36 @@
+version: "3"
+services:
+  # Backup service for MinIO and PostgreSQL
+  backup:
+    build: .
+    container_name: ${BACKUP_SERVICE_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      # PostgreSQL configuration
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      # MinIO configuration
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      # Backup configuration
+      - BACKUP_SCHEDULE=0 0 * * 1  # Every Monday at 12 AM GMT+1
+      - RETENTION_DAYS=30
+      - CRON_MODE=true
+      - TEST_MODE=false  
+    volumes:
+      - ./backups:/backups
+      - ./backups/logs:/logs
+    networks:
+      - preprod_urbankiff
+    depends_on:
+      - postgresDB
+      - minio
+
+networks:
+  preprod_urbankiff:
+    name: preprod_urbankiff
+    driver: bridge
+    external: true

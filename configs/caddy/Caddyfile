@@ -1,0 +1,31 @@
+# Reverse proxy for api.urbankiff.local
+http://api.urbankiff.local {
+  reverse_proxy api:8000
+}
+
+# Reverse proxy for urbankiff.local
+http://urbankiff.local, http://nextjs.urbankiff.local {
+  reverse_proxy app:3000
+}
+
+# Reverse proxy for panel.urbankiff.local
+http://panel.urbankiff.local {
+  reverse_proxy panel:3050
+}
+
+# Reverse proxy for urbankiffdbpgadmin.local
+http://urbankiffdbpgadmin.local {
+  reverse_proxy pgadmin:80
+}
+
+# Reverse proxy for cdn.urbankiff.local
+http://s30.urbankiff.local {
+  reverse_proxy minio:9000
+}
+http://s3.urbankiff.local {
+  reverse_proxy minio:9001
+}
+
+http://mail.urbankiff.local {
+  reverse_proxy mailhog:8025
+}

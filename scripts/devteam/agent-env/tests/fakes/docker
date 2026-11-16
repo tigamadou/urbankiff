@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# devteam 1.0.0 : fichier du kit, ne pas modifier ici
+# Faux docker des tests : journalise ses arguments, répond d'après $FIX et des variables FAKE_*.
+set -euo pipefail
+echo "docker $*" >> "$CALLS_LOG"
+case "${1:-}" in
+  info)
+    case "$*" in
+      *MemTotal*) echo $((${FAKE_MEM_MO:-16000} * 1048576)) ;;
+      *) exit "${FAKE_DOCKER_INFO_RC:-0}" ;;
+    esac
+    ;;
+  ps)
+    projet="" service=""
+    for a in "$@"; do
+      case "$a" in
+        label=com.docker.compose.project=*) projet="${a#label=com.docker.compose.project=}" ;;
+        label=com.docker.compose.service=*) service="${a#label=com.docker.compose.service=}" ;;
+      esac
+    done
+    cle="$projet"
+    [ -z "$service" ] || cle="$projet.$service"
+    [ ! -f "$FIX/ps/$cle" ] || cat "$FIX/ps/$cle"
+    ;;
+  compose)
+    case "$*" in
+      *" up "*) exit "${FAKE_COMPOSE_UP_RC:-0}" ;;
+    esac
+    ;;
+  stats) echo "${FAKE_STATS:-100MiB / 1GiB}" ;;
+esac
+exit 0

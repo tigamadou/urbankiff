@@ -1,0 +1,9 @@
+apps/mobile/
+apps/*/.env
+apps/backup_service/.env*
+.monorepo-work/
+.env
+.vscode
+apps/backup_service/backups/
+.coverage-diff/
+.DS_Store

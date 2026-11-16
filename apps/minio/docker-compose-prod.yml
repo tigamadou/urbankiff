@@ -1,0 +1,27 @@
+version: "3"
+services:
+    minio:
+        container_name: ${MINIO_CONTAINER_NAME}
+        image: docker.io/bitnami/minio:2022
+        ports:
+            - "9002:9000"
+            - "9003:9001"
+        networks:
+            - prod_urbankiff
+        volumes:
+            - "prod_minio_data:/data"
+        environment:
+            - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+            - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+            - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+
+
+volumes:
+    prod_minio_data:
+        driver: local
+
+networks:
+    prod_urbankiff:
+        name: prod_urbankiff
+        driver: bridge
+        external: true

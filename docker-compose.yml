@@ -1,0 +1,225 @@
+
+services:
+  panel:
+    image: node:20-alpine
+    container_name: ${PANEL_CONTAINER_NAME}
+    domainname: ${PANEL_DOMAIN_NAME}
+    ports:
+      - "3050:3050"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_BACKEND_URL=${API_URL}
+      - NODE_OPTIONS=--openssl-legacy-provider
+    depends_on:
+      - api
+    volumes:
+      - ${PANEL_FOLDER}:/app
+    networks:
+      - URBANKIFF
+    command: sh -c "cd app/ && cp .env.development .env && yarn && yarn start"
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - ${CADDYFILE}:/etc/caddy/Caddyfile
+    networks:
+      - URBANKIFF
+
+  postgresDB:
+    container_name: ${MYSQL_CONTAINER_NAME}
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - URBANKIFF
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - ${PGADMIN_SERVER_CONFIG_FILE}:/pgadmin4/servers.json
+      - ${PGADMIN_PASSWORD_FILE}:/pgpass
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgresDB
+    networks:
+      - URBANKIFF
+
+  migrations:
+    container_name: migrations
+    build: ${API_FOLDER}
+    command: sh -c "python manage.py migrate && python manage.py loaddata fixtures/admin.json && python manage.py loaddata fixtures/mail.json && python manage.py prodseed"
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=postgresDB
+      - FILES_CDN_ENDPOINT=http://api.urbankiff.local/file
+    volumes:
+      - ${API_FOLDER}:/app
+    depends_on:
+      postgresDB:
+        condition: service_healthy
+    networks:
+      - URBANKIFF
+
+  api:
+    container_name: ${API_CONTAINER_NAME}
+    build: ${API_FOLDER}
+    env_file:
+      - ${API_FOLDER}/.env
+    domainname: ${API_DOMAIN_NAME}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - migrations
+    volumes:
+      - ${API_FOLDER}:/app
+    networks:
+      - URBANKIFF
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+  workers:
+    container_name: workers
+    build: ${API_FOLDER}
+    command: ["python", "manage.py", "runworkers"]
+    env_file:
+      - ${API_FOLDER}/.env
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=postgresDB
+    volumes:
+      - ${API_FOLDER}:/${API_CONTAINER_NAME}
+    depends_on:
+      - migrations
+    networks:
+      - URBANKIFF
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - URBANKIFF
+
+  minio:
+    container_name: ${MINIO_CONTAINER_NAME}
+    # minio/minio n'est plus publie sur Docker Hub : RustFS (S3 compatible) le remplace en local
+    image: rustfs/rustfs:1.0.1
+    ports:
+        - "9002:9000"
+        - "9003:9001"
+    networks:
+        - URBANKIFF
+    volumes:
+        - "minio_data:/data"
+        - "./dummy_data:/dummy_data"
+    environment:
+        - RUSTFS_ACCESS_KEY=${MINIO_ROOT_USER}
+        - RUSTFS_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+        - RUSTFS_CONSOLE_ENABLE=true
+        - RUSTFS_ADDRESS=0.0.0.0:9000
+        - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    container_name: imgproxy
+    environment:
+      - IMGPROXY_USE_S3=true
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - IMGPROXY_ALLOWED_SOURCES=s3://
+      - IMGPROXY_VALID_SCHEMAS=s3
+      - IMGPROXY_DEVELOPMENT_ERRORS_MODE=true
+      - AWS_S3_FORCE_PATH_STYLE=true
+      - IMGPROXY_S3_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+      - IMGPROXY_S3_REGION=us-east-1
+      - IMGPROXY_USE_SIGNED_URLS=true
+      - IMGPROXY_S3_FORCE_PATH_STYLE=true
+      - IMGPROXY_S3_ENDPOINT=http://minio:9000
+      - IMGPROXY_BASE_URL=http://imgproxy:8080
+      - IMGPROXY_KEY=${IMGPROXY_KEY}
+      - IMGPROXY_SALT=${IMGPROXY_SALT}
+      - IMGPROXY_MAX_ANIMATION_FRAMES=300
+      - IMGPROXY_QUALITY=80
+      - IMGPROXY_FORMAT_QUALITY=webp=60
+      - IMGPROXY_MAX_SRC_RESOLUTION=8192
+      - IMGPROXY_MAX_SRC_FILE_SIZE=32
+      - IMGPROXY_READ_REQUEST_TIMEOUT=10
+      - IMGPROXY_TIMEOUT=10
+      - IMGPROXY_DOWNLOAD_TIMEOUT=10
+      - IMGPROXY_TTL=31536000
+      - IMGPROXY_CACHE_CONTROL_PASSTHROUGH=true
+    ports:
+      - "1055:8080"
+    depends_on:
+      - minio
+    networks:
+      - URBANKIFF
+    restart: unless-stopped
+    links:
+      - minio
+  redis:
+    image: redis:alpine
+    container_name: ${REDIS_ENDPOINT}
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    networks:
+      - URBANKIFF
+  nextjs:
+    container_name: ${FRONT_NEXTJS_CONTAINER_NAME}
+    domainname: ${FRONT_NEXTJS_HOSTNAME}
+    build:
+      context: ${FRONT_NEXTJS_FOLDER}
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ${FRONT_NEXTJS_FOLDER}/.env
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ${FRONT_NEXTJS_FOLDER}:/app
+      - nextjs_node_modules:/app/node_modules
+    networks:
+      - URBANKIFF
+
+volumes:
+  nextjs_node_modules:
+  pgadmin_data:
+  caddy_data:
+  postgres_data:
+  minio_data:
+    driver: local
+
+networks:
+  URBANKIFF:
+    name: URBANKIFF
+    driver: bridge
+

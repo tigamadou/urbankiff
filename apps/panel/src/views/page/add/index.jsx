@@ -1,0 +1,87 @@
+/* eslint-disable no-unused-vars */
+// ** Invoice Add Components
+import AddCard from "./AddCard"
+import AddActions from "./AddActions"
+import Cover from "../cover"
+
+// ** Reactstrap Imports
+import { Row, Col, Form, Spinner } from "reactstrap"
+import { toast } from "react-toastify"
+// ** Styles
+// import "@styles/react/libs/flatpickr/flatpickr.scss"
+// import "@styles/base/pages/app-invoice.scss"
+import slugify from "react-slugify"
+import { useState, useEffect } from "react"
+import { useSelector } from "react-redux"
+import { useHistory } from "react-router-dom"
+import { EditorState } from "draft-js"
+import { stateToHTML } from "draft-js-export-html"
+import PublishedCard from "../cover/PublishedCard"
+import useFetch from "../../hooks/useFetch"
+
+const PageAdd = () => {
+  const [language, setLanguage] = useState("")
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState(EditorState.createEmpty())
+  const [loading, setLoading] = useState(false)
+
+  const [published, setPublished] = useState(false)
+  const [deleted] = useState(false)
+  const [views] = useState(0)
+
+  const { post } = useFetch()
+  const history = useHistory()
+
+  const createPage = () => {
+    const data = {
+      title,
+      slug: slugify(title),
+      content: stateToHTML(content.getCurrentContent()),
+      published,
+      deleted,
+      views,
+      language
+    }
+
+    post("/page/", JSON.stringify(data)).then((res) => {
+      if (res.status === 201) {
+        toast.success("Page added succesfully !")
+        history.push("/Page/list")
+      }
+    })
+
+    setLoading(false)
+  }
+
+  const onHandleSubmit = (e) => {
+    e.preventDefault()
+    setLoading(true)
+    createPage()
+  }
+
+  return (
+    <div className="invoice-add-wrapper">
+      <Form onSubmit={(e) => onHandleSubmit(e)}>
+        <Row className="invoice-add">
+          <Col xl={9} md={8} sm={12}>
+            <AddCard
+              title={title}
+              content={content}
+              setTitle={setTitle}
+              setContent={setContent}
+              loading={loading}
+              language={language}
+              setLanguage={setLanguage}
+            />
+          </Col>
+          <Col xl={3} md={4} sm={12}>
+            <PublishedCard setPublished={setPublished} published={published} />
+            <AddActions loading={loading} />
+          </Col>
+        </Row>
+      </Form>
+    </div>
+  )
+}
+
+export default PageAdd

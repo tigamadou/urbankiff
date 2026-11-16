@@ -1,0 +1,68 @@
+services:
+  migrations:
+    restart: always
+    container_name: urbankiff-preprod-api-migrations
+    build: .
+    env_file:
+      - .env 
+    command: sh -c "python manage.py migrate &&
+                    python manage.py loaddata fixtures/admin.json &&
+                    python manage.py loaddata fixtures/mail.json &&
+                    python manage.py prodseed"
+    volumes:
+      - .:/app
+    networks:
+      - preprod_urbankiff
+
+  api:
+    restart: always
+    container_name: urbankiff-preprod-api
+    build: .
+    env_file:
+      - .env 
+    domainname: preprod.api.urbankiff.com
+    ports:
+      - '8000:8000'
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+    depends_on:
+      - migrations
+    volumes:
+      - .:/app
+    command:  ['python', 'manage.py', 'runserver', '0.0.0.0:8000']
+    networks:
+      - preprod_urbankiff
+
+  workers:
+    restart: always
+    container_name: urbankiff-preprod-api-workers
+    build: .
+    command: ['python', 'manage.py', 'runworkers']
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+    volumes:
+      - .:/urbankiff-api
+    depends_on:
+      - migrations
+    networks:
+      - preprod_urbankiff
+  redis:
+    image: redis:alpine
+    container_name: urbankiff-preprod-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    networks:
+      - preprod_urbankiff
+networks:
+  preprod_urbankiff:
+    name: preprod_urbankiff
+    driver: bridge
+    external: true

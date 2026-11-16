@@ -1,0 +1,31 @@
+services:
+
+  next:
+    restart: always
+    container_name: preprod.urbankiff.com
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    networks:
+      - preprod_urbankiff
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+networks:
+  preprod_urbankiff:
+    name: preprod_urbankiff
+    driver: bridge
+    external: true

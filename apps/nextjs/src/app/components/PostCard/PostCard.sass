@@ -1,0 +1,71 @@
+.postcard
+    opacity: 1
+    transition: all 0.25s ease-in-out
+    transform: translateY(0px)
+    
+    &.is-out-viewport
+        opacity: 0
+        transform: translateY(20px)
+    .post-image
+        margin-bottom: 8px
+        
+    .post-category
+        display: inline-block
+        z-index: 2
+        color: #000
+        font-size: 11px
+        border-bottom: 2px solid transparent
+        text-transform: capitalize
+        position: absolute
+        bottom: 0px
+        right: 0px
+    
+   
+    a.title
+        font-family: 'Roboto', sans-serif
+        margin: 0
+        margin-bottom: 8px
+        font-weight: 700
+        display: -webkit-box
+        -webkit-box-orient: vertical
+        -webkit-line-clamp: 3
+        overflow: hidden
+        color: #000
+        font-weight: 500
+        font-size: 18px
+
+    &:hover
+      
+        a
+            color: red
+    .postcard-date
+        font-size: 11px
+        color: #555
+        margin-bottom: 8px
+        color: #616972
+    &.with-row
+        display: flex
+        grid-gap: 16px
+        margin-bottom: 16px
+        .post-image
+            min-width: 30%
+            max-width: 30%
+            margin: 0px
+            figure
+                aspect-ratio: 1/1
+                img
+                    aspect-ratio: 1/1
+        .title
+            padding: 0px
+            font-size: 14px
+            line-height: 20px
+
+        .post-category
+            display: none
+    &.light
+        .title
+            a
+                color: #fff
+        .post-category, .postcard-date
+            color: #fff
+            

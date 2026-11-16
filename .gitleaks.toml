@@ -1,0 +1,16 @@
+# Configuration gitleaks (make secrets-scan) : règles par défaut, plus les règles propres au projet ci-dessous.
+# Aucune exception : les valeurs de développement local versionnées ne sont pas détectées par ces règles.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "firebase-cloud-messaging-server-key"
+description = "Clé serveur Firebase Cloud Messaging (FCM/GCM historique)"
+regex = '''AAAA[A-Za-z0-9_-]{7}:APA91[A-Za-z0-9_-]{100,}'''
+keywords = ["APA91"]
+
+[[rules]]
+id = "google-oauth-access-token"
+description = "Jeton d accès OAuth Google (ya29.…)"
+regex = '''ya29\.[A-Za-z0-9_-]{20,}'''
+keywords = ["ya29."]

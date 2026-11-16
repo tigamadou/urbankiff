@@ -1,0 +1,98 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# Unless the file starts with a global options block, the first
+# uncommented line is always the address of your site.
+#
+# To use your own domain name (with automatic HTTPS), first make
+# sure your domain's A/AAAA DNS records are properly pointed to
+# this machine's public IP, then replace ":80" below with your
+# domain name.
+
+# :80 {
+# 	# Set this path to your site's directory.
+# 	root * /usr/share/caddy
+
+# 	# Enable the static file server.
+# 	file_server
+
+# 	# Another common task is to set up a reverse proxy:
+# 	# reverse_proxy localhost:8080
+
+# 	# Or serve a PHP site through php-fpm:
+# 	# php_fastcgi localhost:9000
+# }
+
+preprod.api.urbankiff.com {
+	reverse_proxy :8000
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+preprod.urbankiff.com {
+	reverse_proxy :3000
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+preprod.panel.urbankiff.com {
+	reverse_proxy :3050
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+panel.urbankiff.com {
+	reverse_proxy :3051
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+api.urbankiff.com {
+	reverse_proxy :8001
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+urbankiff.com {
+	reverse_proxy :3500
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+# PreProd Cdn
+preprod.s3.urbankiff.com {
+	reverse_proxy :9000
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+# Prod Cdn backoffice
+preprod.s30.urbankiff.com {
+	reverse_proxy :9001
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+
+
+# Prod Cdn
+s3.urbankiff.com {
+	reverse_proxy :9002
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+# Prod Cdn backoffice
+s30.urbankiff.com {
+	reverse_proxy :9003
+	header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+}
+# Refer to the Caddy docs for more information:
+# https://caddyserver.com/docs/caddyfile

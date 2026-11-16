@@ -1,0 +1,87 @@
+# CI devteam : chaque job appelle des cibles make ; ci-ok agrège le résultat (check requis unique, voir
+# .claude/devteam.projet.md). Les jobs ne tournent que pour les applications touchées par la PR.
+name: CI devteam
+
+on:
+  pull_request:
+  push:
+    branches: [development]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filtre.outputs.api }}
+      nextjs: ${{ steps.filtre.outputs.nextjs }}
+      panel: ${{ steps.filtre.outputs.panel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filtre
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          communs='^(Makefile|make/|docker-compose\.yml|\.env\.template|\.github/workflows/devteam-ci\.yml)'
+          for app in api nextjs panel; do
+            if [ -z "$BASE" ] || git diff --name-only "$BASE"...HEAD | grep -qE "$communs|^apps/$app/"; then
+              echo "$app=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$app=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
+  api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fichiers d'environnement de développement
+        run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
+      - name: Base de test
+        run: docker compose up -d --wait postgresDB
+      - run: make lint-api
+      - if: ${{ !cancelled() }}
+        run: make migrations-check
+      - if: ${{ !cancelled() }}
+        run: make test-cible T=apps/api/apps
+
+  nextjs:
+    needs: changes
+    if: needs.changes.outputs.nextjs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fichiers d'environnement de développement
+        run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
+      - run: make lint-nextjs
+      - if: ${{ !cancelled() }}
+        run: make typecheck
+
+  panel:
+    needs: changes
+    if: needs.changes.outputs.panel == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fichiers d'environnement de développement
+        run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
+      - run: make lint-panel
+      - if: ${{ !cancelled() }}
+        run: make test-cible T=apps/panel/src
+
+  ci-ok:
+    if: always()
+    needs: [changes, api, nextjs, panel]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tous les jobs exécutés ont réussi
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'

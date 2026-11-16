@@ -1,0 +1,106 @@
+.imageWL
+    display: block
+    width: 100%
+    position: relative
+    transition: all 0.25s ease-in-out
+    overflow: hidden
+
+
+    *
+        max-width: 100%
+        display: block
+    
+    &.original
+        overflow: auto
+        &:after
+            padding: none
+            display: none
+    &.hoverable
+        @media screen and (max-width: 767px) 
+            &:hover
+                transform: none
+        &:hover
+            transform: scale(1.05)
+    &:after 
+        content: ""
+        display: block
+        padding-bottom: 100%
+    &.ratio_165
+        &::after
+            padding-bottom: 65%
+            @media screen and (max-width: 767px) 
+                padding-bottom: 100%
+    &.ratio_1150
+        &::after
+            padding-bottom: 125%
+            @media screen and (max-width: 767px) 
+                padding-bottom: 100%
+    .imageWL-container
+        position: absolute
+        width: 100%
+        height: 100%
+        background-position: center
+        background-size: cover
+        
+        .imageWL-loaded
+            position: absolute
+            width: 100%
+            height: 100%
+            background-position: center
+            background-size: cover
+            z-index: 1
+            display: flex
+            justify-content: center
+            align-items: center
+            img
+                visibility: hidden
+            
+        .imageWL-preview
+            position: absolute
+            width: 100%
+            height: 100%
+            z-index: 2
+            transition: all 0.25s ease-in-out
+            transition-delay: 0.5s
+            opacity: 1
+            &.hidden
+                opacity: 0
+
+            .imageWL-previewer
+                position: absolute
+                width: 100%
+                height: 100%
+                background-position: center
+                background-size: cover
+                filter: blur(8px)
+                -webkit-filter: blur(8px)
+                   
+    .imageWL-orignal-container
+        text-align: center
+        position: relative
+        height: 400px
+
+        transition: all 0.2s ease-in-out
+        *
+            transition: all 0.2s ease-in-out
+        .imageWL-orignal-blur
+            background-position: center
+            background-size: cover
+            filter: blur(8px)
+            -webkit-filter: blur(8px)
+            position: absolute
+            top: 0px
+            left: 0px
+            right: 0px
+            bottom: 0px
+        .imageWL-orignal-image
+            position: absolute
+            top: 0px
+            left: 0px
+            right: 0px
+            z-index: 1
+            opacity: 0
+            transition: all 0.2s ease-in-out
+        img
+            max-height: 60vh
+            display: inline

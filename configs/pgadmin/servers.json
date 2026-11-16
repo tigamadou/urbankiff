@@ -1,0 +1,14 @@
+{
+    "Servers": {
+      "0": {
+        "Name": "mysqlDB",
+        "Group": "Servers",
+        "Host": "mysqlDB",
+        "Port": "5432",
+        "Username": "postgres",
+        "PasswordFile":  "./pgadmin4/pgpass",
+        "SSLMode": "prefer",
+        "MaintenanceDB": "postgres"
+      }
+    }
+}
