@@ -36,6 +36,8 @@ api:
       memory: 384Mi
 
 workers:
+  # processus du pool multiprocessing : chacun recharge Django (~90 Mi), à accorder avec la limite mémoire
+  processus: 1
   ressources:
     requests:
       memory: 128Mi

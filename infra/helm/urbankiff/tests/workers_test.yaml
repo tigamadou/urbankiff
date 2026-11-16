@@ -69,3 +69,19 @@ tests:
           content:
             name: tmp
             emptyDir: {}
+  - it: nombre de processus borné (un par CPU par défaut dans multiprocessing, au-delà de la limite mémoire)
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKERS_PROCESSES
+            value: "1"
+  - it: nombre de processus réglable
+    set:
+      workers.processus: 3
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKERS_PROCESSES
+            value: "3"
