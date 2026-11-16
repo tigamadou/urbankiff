@@ -16,6 +16,11 @@ fi
 dump="$1"
 bucket="${2:-}"
 
+if [ -n "$bucket" ] && [ ! -d "$bucket" ]; then
+  erreur "dossier de bucket introuvable : $bucket"
+  exit 1
+fi
+
 version=$(version_pg_du_dump "$dump")
 verifier_version_supportee "$version"
 majeure="${version%%.*}"
@@ -160,6 +165,8 @@ SQL
   echo
   if [ -z "$bucket" ]; then
     echo "Bucket non inspecté (aucun dossier fourni)."
+  else
+    analyser_bucket "$bucket"
   fi
 }
 

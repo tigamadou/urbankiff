@@ -171,3 +171,21 @@ tableau() {
   printf '\n'
   printf '%s\n' "$lignes" | awk -F'|' '{ printf "|"; for (i = 1; i <= NF; i++) printf " %s |", $i; print "" }'
 }
+
+image_outils() {
+  docker build -q -t "$IMAGE_OUTILS" - > /dev/null << 'DOCKERFILE'
+FROM alpine:3.20
+RUN apk add --no-cache file
+DOCKERFILE
+}
+
+# analyser_bucket <dossier> : le dossier est lu par `tar` (jamais modifié) et extrait dans un conteneur sans réseau.
+analyser_bucket() {
+  if [ ! -d "$1" ]; then
+    erreur "dossier de bucket introuvable : $1"
+    return 1
+  fi
+  image_outils
+  COPYFILE_DISABLE=1 tar -C "$1" -cf - . | docker run --rm -i --network none --label "$REST_LABEL" "$IMAGE_OUTILS" \
+    sh -c "$(printf 'set -e\nmkdir /b\ntar -xf - -C /b\n'; cat "$RESTAURATION_DIR/analyser-bucket.sh")"
+}

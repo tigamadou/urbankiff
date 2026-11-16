@@ -34,7 +34,7 @@ fabriqué par le test, sans aucune donnée réelle.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : 🟡 en cours · Prochaine tâche : 5
 
 - [x] **Tâche 1** Squelette : dossier ignoré, cible de tests, bibliothèque commune · `feature/k3s-ansible-restauration`
   - [x] test bats de la bibliothèque (détection de version, garde-fous d'arguments), échec constaté
@@ -45,9 +45,9 @@ Statut : 🟡 en cours · Prochaine tâche : 4
 - [x] **Tâche 3** `inspecter-sauvegarde.sh` : partie base de données
   - [x] tests bats : chaque piège apparaît dans le rapport, aucune donnée personnelle
   - [x] implémentation du script
-- [ ] **Tâche 4** `inspecter-sauvegarde.sh` : partie bucket
-  - [ ] tests bats sur un dossier de bucket fabriqué
-  - [ ] implémentation
+- [x] **Tâche 4** `inspecter-sauvegarde.sh` : partie bucket
+  - [x] tests bats sur un dossier de bucket fabriqué
+  - [x] implémentation
 - [ ] **Tâche 5** `repeter-sauvegarde.sh` : restauration répétée et comparaison des décomptes
   - [ ] tests bats : décomptes égaux ; un écart provoqué est détecté
   - [ ] implémentation
