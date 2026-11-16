@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Faux helm : journalise les arguments ; `pull --untar` crée le chart décompressé.
+set -euo pipefail
+: "${FAKE_LOG:?}"
+echo "helm $*" >> "$FAKE_LOG"
+case "$1" in
+  pull)
+    [ -z "${FAKE_PULL_ECHEC:-}" ] || { echo "not found" >&2; exit 1; }
+    nom="${2##*/}"
+    dest=""
+    for ((i = 1; i <= $#; i++)); do [ "${!i}" = "--untardir" ] && { j=$((i + 1)); dest="${!j}"; }; done
+    mkdir -p "$dest/$nom"
+    : > "$dest/$nom/values-preprod.yaml"; : > "$dest/$nom/values-prod.yaml"
+    ;;
+  upgrade) [ -z "${FAKE_UPGRADE_ECHEC:-}" ] || { echo "echec" >&2; exit 1; } ;;
+esac

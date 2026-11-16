@@ -35,11 +35,11 @@ de la mission `k3s-ansible`, lot 7 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ⬜ à faire · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Script serveur : squelette, commande forcée, semver, verrou, configuration · `feature/k3s-ansible-deploiement`
-  - [ ] bats : faux binaires et cas de refus
-  - [ ] implémentation
+- [x] **Tâche 1** Script serveur : squelette, commande forcée, semver, verrou, configuration · `feature/k3s-ansible-deploiement`
+  - [x] bats : faux binaires et cas de refus
+  - [x] implémentation
 - [ ] **Tâche 2** Script serveur : entrée standard, Secrets, empreinte, réutilisation sans entrée
   - [ ] bats : validation, taille, clés, aucune fuite
   - [ ] implémentation

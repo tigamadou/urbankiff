@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Faux kubectl : journalise les arguments, la longueur et les NOMS de l'entrée standard, jamais son contenu.
+set -euo pipefail
+: "${FAKE_LOG:?}" "${FAKE_STATE:?}"
+echo "kubectl $*" >> "$FAKE_LOG"
+journaliser_entree() {
+  local contenu
+  contenu="$(cat; printf x)"; contenu="${contenu%x}"
+  echo "STDIN $1 ${#contenu}" >> "$FAKE_LOG"
+  printf '%s' "$contenu" | sed -nE 's/^([A-Za-z0-9_]+)=.*/\1/p' | sort | tr '\n' ',' | sed 's/^/STDIN_NOMS /' >> "$FAKE_LOG"
+  echo >> "$FAKE_LOG"
+}
+case "$1" in
+  get)
+    case "$2" in
+      secret) [ -f "$FAKE_STATE/secret.txt" ] || { echo "NotFound" >&2; exit 1; }; cat "$FAKE_STATE/secret.txt" ;;
+      configmap) [ -f "$FAKE_STATE/config.txt" ] || { echo "NotFound" >&2; exit 1; }; cat "$FAKE_STATE/config.txt" ;;
+      ingress) printf '%s' "${FAKE_HOTE-api.test.example}" ;;
+      deployment|statefulset) [ ! -f "$FAKE_STATE/$2.txt" ] || cat "$FAKE_STATE/$2.txt" ;;
+      cluster.postgresql.cnpg.io/*) [ ! -f "$FAKE_STATE/hibernation.txt" ] || cat "$FAKE_STATE/hibernation.txt" ;;
+      *) echo "faux kubectl : get inattendu : $*" >&2; exit 1 ;;
+    esac ;;
+  create) journaliser_entree create; echo "fake-yaml" ;;
+  apply) journaliser_entree apply ;;
+  wait) [ -z "${FAKE_WAIT_ECHEC:-}" ] || { echo "timeout" >&2; exit 1; } ;;
+  *) ;;
+esac
