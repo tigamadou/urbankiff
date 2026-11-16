@@ -1,0 +1,76 @@
+# prod ou preprod : obligatoire (voir values-prod.yaml et values-preprod.yaml)
+environnement: ""
+# empreinte des secrets, calculée par le script de déploiement : un changement redémarre les pods qui les lisent
+secretsChecksum: ""
+secretName: urbankiff-secrets
+# ConfigMap des variables non secrètes, créée par le script de déploiement (spec § 8.5, A5)
+configName: urbankiff-config
+# Secret généré par CloudNativePG (chart urbankiff-donnees), spec § 8.5, A3
+secretBase: urbankiff-pg-app
+
+image:
+  depot: ghcr.io/tigamadou
+  # version de la release (api) ; Next et panel ajoutent -<environnement> (obligatoire)
+  etiquette: ""
+  # Secret de tirage d'images, facultatif (paquets GHCR publics par défaut, spec § 8.5, A1)
+  secretTirage: ""
+
+hosts:
+  web: ""
+  api: ""
+  panel: ""
+
+ingress:
+  classe: traefik
+  clusterIssuer: letsencrypt
+
+# faux : TWILIO_ACCOUNT_SID et TWILIO_AUTH_TOKEN reçoivent des valeurs inertes (le code les lit à l'import)
+sms:
+  actif: false
+
+api:
+  ressources:
+    requests:
+      memory: 200Mi
+    limits:
+      memory: 384Mi
+
+workers:
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+migrations:
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 384Mi
+
+nextjs:
+  ressources:
+    requests:
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+panel:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+reseau:
+  namespacePlateforme: plateforme
+  cidrPod: 10.42.0.0/16
+  cidrService: 10.43.0.0/16
+  cidrExclus:
+    - 10.42.0.0/16
+    - 10.43.0.0/16
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16

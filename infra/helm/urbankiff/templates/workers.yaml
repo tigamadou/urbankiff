@@ -1,0 +1,53 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: urbankiff-workers
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "workers") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "workers" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "workers") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: workers
+          image: {{ include "urbankiff.imageApi" . }}
+          command: ["python", "manage.py", "runworkers"]
+          envFrom:
+            {{- include "urbankiff.envFrom" . | nindent 12 }}
+          env:
+            {{- include "urbankiff.envApp" . | nindent 12 }}
+          # le processus des workers est le PID 1 du conteneur : sans port, seule sa présence se vérifie
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "kill -0 1"]
+            periodSeconds: 20
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "kill -0 1"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.workers.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
