@@ -18,7 +18,7 @@ setup() {
 }
 
 ecrire_config() {
-  printf 'URBANKIFF_ENV=%s\nGHCR_OWNER=tigamadou\nNAMESPACE=%s\n' "$1" "$1" > "$URBANKIFF_CONFIG_DIR/deploy.$1.env"
+  printf 'URBANKIFF_ENV=%s\nGHCR_OWNER=tigamadou\nNAMESPACE=%s\nAPI_SERVER_CIDR=203.0.113.10/32\n' "$1" "$1" > "$URBANKIFF_CONFIG_DIR/deploy.$1.env"
 }
 
 lancer() { # <env> <commande>
@@ -81,7 +81,7 @@ lancer() { # <env> <commande>
 }
 
 @test "configuration incomplète : erreur qui nomme la clé" {
-  for cle in URBANKIFF_ENV GHCR_OWNER NAMESPACE; do
+  for cle in URBANKIFF_ENV GHCR_OWNER NAMESPACE API_SERVER_CIDR; do
     ecrire_config preprod
     sed -i "/^$cle=/d" "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
     lancer preprod "preprod-arret"
@@ -111,7 +111,7 @@ lancer() { # <env> <commande>
 }
 
 @test "configuration : commentaires et lignes vides tolérés" {
-  printf '# commentaire\n\nURBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
+  printf '# commentaire\n\nURBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\nAPI_SERVER_CIDR=203.0.113.10/32\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
   lancer preprod "deploy 1.0.0"
   [[ "$output" == *"version 1.0.0"* ]]
 }
@@ -132,4 +132,14 @@ lancer() { # <env> <commande>
   echo 'minuscule=1' >> "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
   lancer preprod "preprod-arret"
   [ "$status" -eq 1 ]
+}
+
+@test "configuration : API_SERVER_CIDR strictement une IPv4 en /32" {
+  for valeur in "203.0.113.10" "203.0.113.10/24" "203.0.113.10/32,10.0.0.1/32" "203.0.113.10/32 " "a.b.c.d/32" '$(id)/32' ""; do
+    ecrire_config preprod
+    sed -i "s|^API_SERVER_CIDR=.*|API_SERVER_CIDR=$valeur|" "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
+    lancer preprod "preprod-arret"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"API_SERVER_CIDR"* ]]
+  done
 }

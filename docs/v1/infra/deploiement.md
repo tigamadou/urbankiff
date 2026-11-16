@@ -40,8 +40,10 @@ Commandes acceptées, motif strict (aucun `eval`, aucune valeur interpolée dans
 | `preprod-demarrage` | réveille la base puis remet les charges à l'échelle d'origine (preprod seulement) |
 
 Tout le reste est refusé (code de sortie 2). Configuration serveur : `/etc/urbankiff/deploy.<env>.env`
-(`URBANKIFF_ENV`, `GHCR_OWNER`, `NAMESPACE`), kubeconfig `/home/deploy/.kube/<env>`. Un seul déploiement à la fois
-(`flock` sur `/var/lock/urbankiff-deploy.lock`).
+(`URBANKIFF_ENV`, `GHCR_OWNER`, `NAMESPACE`, `API_SERVER_CIDR`), kubeconfig `/home/deploy/.kube/<env>`. Un seul déploiement à la fois
+(`flock` sur `/var/lock/urbankiff-deploy.lock`). `API_SERVER_CIDR` (IP du noeud k3s en `/32`, ex. `203.0.113.10/32`, sans secret) est
+obligatoire, validée strictement (IPv4 en `/32`), écrite par le rôle ansible `deploiement` et passée au chart `urbankiff`
+par `--set reseau.apiKubernetes.cidr=...` (pas au chart `urbankiff-donnees`).
 
 Entrée standard facultative, au plus 64 Ko, lignes `NOM=valeur` : les noms de `scripts/secrets/secrets.txt` forment le
 Secret `urbankiff-secrets`, ceux de `scripts/secrets/variables-<env>.txt` la ConfigMap `urbankiff-config` (tous

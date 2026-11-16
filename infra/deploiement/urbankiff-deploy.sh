@@ -48,7 +48,7 @@ lire_configuration() {
   case "$1" in prod|preprod) ENV="$1" ;; *) die "environnement attendu en premier argument : prod ou preprod" ;; esac
   local fichier="$CONFIG_DIR/deploy.$ENV.env" ligne cle valeur
   [ -f "$fichier" ] || die "configuration introuvable : $fichier"
-  local URBANKIFF_ENV="" GHCR_OWNER="" NAMESPACE_LU=""
+  local URBANKIFF_ENV="" GHCR_OWNER="" NAMESPACE_LU="" API_CIDR_LU=""
   while IFS= read -r ligne || [ -n "$ligne" ]; do
     [ -n "$ligne" ] && [ "${ligne#\#}" = "$ligne" ] || continue
     [[ "$ligne" =~ ^([A-Z_]+)=(.*)$ ]] || die "configuration : ligne mal formée"
@@ -57,17 +57,21 @@ lire_configuration() {
       URBANKIFF_ENV) URBANKIFF_ENV="$valeur" ;;
       GHCR_OWNER) GHCR_OWNER="$valeur" ;;
       NAMESPACE) NAMESPACE_LU="$valeur" ;;
+      API_SERVER_CIDR) API_CIDR_LU="$valeur" ;;
       *) die "configuration : clé inconnue $cle" ;;
     esac
   done < "$fichier"
   [ -n "$URBANKIFF_ENV" ] || die "configuration : URBANKIFF_ENV absent"
   [ -n "$GHCR_OWNER" ] || die "configuration : GHCR_OWNER absent"
   [ -n "$NAMESPACE_LU" ] || die "configuration : NAMESPACE absent"
+  [ -n "$API_CIDR_LU" ] || die "configuration : API_SERVER_CIDR absent"
   [ "$URBANKIFF_ENV" = "$ENV" ] || die "configuration : URBANKIFF_ENV ne correspond pas à l'environnement de la clé"
   [[ "$GHCR_OWNER" =~ ^[A-Za-z0-9-]+$ ]] || die "configuration : GHCR_OWNER invalide"
   [[ "$NAMESPACE_LU" =~ ^[a-z0-9-]+$ ]] || die "configuration : NAMESPACE invalide"
+  [[ "$API_CIDR_LU" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}/32$ ]] || die "configuration : API_SERVER_CIDR invalide (attendu : IPv4 en /32)"
   OWNER="$GHCR_OWNER"
   NAMESPACE="$NAMESPACE_LU"
+  API_SERVER_CIDR="$API_CIDR_LU"
 }
 
 verrouiller() {
@@ -194,7 +198,8 @@ deployer_charts() {
   helm upgrade --install urbankiff "$TMP/charts/urbankiff" -n "$NAMESPACE" \
     -f "$TMP/charts/urbankiff/values-$ENV.yaml" --atomic --wait --timeout 10m \
     --set "image.etiquette=$VERSION" --set "secretsChecksum=$CHECKSUM" --set "environnement=$ENV" \
-    --set "wasabi.region=$WASABI_REGION,wasabi.bucket=$WASABI_BUCKET"
+    --set "wasabi.region=$WASABI_REGION,wasabi.bucket=$WASABI_BUCKET" \
+    --set "reseau.apiKubernetes.cidr=$API_SERVER_CIDR"
 }
 
 verifier_sante() {

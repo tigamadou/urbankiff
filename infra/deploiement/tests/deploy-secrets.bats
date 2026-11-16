@@ -16,7 +16,7 @@ setup() {
   export URBANKIFF_CONFIG_DIR="$BATS_TEST_TMPDIR/etc"
   export URBANKIFF_LOCK_FILE="$BATS_TEST_TMPDIR/verrou"
   mkdir -p "$URBANKIFF_CONFIG_DIR"
-  printf 'URBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
+  printf 'URBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\nAPI_SERVER_CIDR=203.0.113.10/32\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
   ENTREE="$BATS_TEST_TMPDIR/entree"
   entree_complete > "$ENTREE"
 }

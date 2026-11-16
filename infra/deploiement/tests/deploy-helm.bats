@@ -15,7 +15,7 @@ setup() {
   export URBANKIFF_LOCK_FILE="$BATS_TEST_TMPDIR/verrou"
   export TMPDIR="$BATS_TEST_TMPDIR"
   mkdir -p "$URBANKIFF_CONFIG_DIR"
-  printf 'URBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
+  printf 'URBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\nAPI_SERVER_CIDR=203.0.113.10/32\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
   ENTREE="$BATS_TEST_TMPDIR/entree"
   {
     for nom in $(grep -vE '^(#|$)' "$RACINE_DEPOT/scripts/secrets/secrets.txt" | cut -d' ' -f1); do echo "$nom=valeur-$nom"; done
@@ -116,4 +116,13 @@ numero() { grep -n -m1 -- "$1" "$FAKE_LOG" | cut -d: -f1; }
   ! grep -qF "$repere" "$FAKE_LOG"
   [[ "$output" != *"$repere"* ]]
   ! grep -q 'valeur-SMTP_PASSWORD' "$FAKE_LOG"
+}
+
+@test "l'application reçoit reseau.apiKubernetes.cidr issu de la configuration, pas les données" {
+  deployer
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  ligne_app="$(grep '^helm upgrade --install urbankiff ' "$FAKE_LOG")"
+  [[ "$ligne_app" == *"--set reseau.apiKubernetes.cidr=203.0.113.10/32"* ]]
+  ligne_donnees="$(grep '^helm upgrade --install urbankiff-donnees ' "$FAKE_LOG")"
+  [[ "$ligne_donnees" != *"apiKubernetes"* ]]
 }
