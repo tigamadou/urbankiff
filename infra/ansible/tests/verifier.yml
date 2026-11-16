@@ -135,6 +135,7 @@
           - (item.content | b64decode) is search('URBANKIFF_ENV=' ~ item.item)
           - (item.content | b64decode) is search('GHCR_OWNER=' ~ ghcr_owner)
           - (item.content | b64decode) is search('NAMESPACE=' ~ deploiement_envs[item.item].namespace)
+          - (item.content | b64decode) is search('API_SERVER_CIDR=[0-9]{1,3}(\.[0-9]{1,3}){3}/32')
         quiet: true
       loop: "{{ deploy_envs.results }}"
       loop_control:

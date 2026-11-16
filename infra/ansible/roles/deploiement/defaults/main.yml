@@ -39,3 +39,6 @@ deploiement_role_regles:
   - apiGroups: [cert-manager.io]
     resources: [certificates]
     verbs: "{{ deploiement_verbes_lecture }}"
+
+# API_SERVER_CIDR de deploy.<env>.env : IP du nœud k3s en /32, lue par le script de déploiement (reseau.apiKubernetes.cidr).
+# Pour la fixer, renseigner api_server_ip dans deploiement_envs.<env> (inventaire) ; sinon ansible_default_ipv4.address.
