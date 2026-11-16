@@ -73,6 +73,13 @@ Avant de lancer le script, créer chez chaque fournisseur la nouvelle valeur (sa
 > posées avec `SEULEMENT="<noms>" make secrets-definir ENV=<env> REPO=tigamadou/urbankiff` avant le premier
 > déploiement. Les révocations de la section 4 attendent ces nouvelles valeurs.
 
+> État au 2026-11-16 : GitHub Actions ne crée aucune exécution sur le compte (quota inclus du mois épuisé, aucune
+> cause trouvée côté dépôt ni côté budget). Le check obligatoire `ci-ok` a été **retiré temporairement** de la
+> protection de `development` et `main` (force push et suppression restent interdits).
+
+- [ ] Actions de nouveau fonctionnel (une PR déclenche `CI devteam`) et `ci-ok` rétabli comme check obligatoire sur
+      `development` et `main` — date :
+
 ## 4. Révocations
 
 - [ ] Fournisseur SMTP : ancien jeton révoqué — date :
