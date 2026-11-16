@@ -1,0 +1,51 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: urbankiff-sauvegarde-fichiers
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "sauvegarde-fichiers") | nindent 4 }}
+spec:
+  schedule: {{ .Values.sauvegardeFichiers.planification | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "urbankiff.labels" (dict "ctx" . "composant" "sauvegarde-fichiers") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            {{- include "urbankiff.securityContextPod" . | nindent 12 }}
+          containers:
+            - name: rclone
+              image: {{ .Values.image.rclone }}
+              args: ["copy", "rustfs:$(BUCKET)", "wasabi:$(WASABI_BUCKET)/{{ .Values.wasabi.prefixeBase }}fichiers"]
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: urbankiff-config
+                      key: MINIO_DEFAULT_BUCKETS
+                - name: WASABI_BUCKET
+                  value: {{ include "urbankiff.wasabiBucket" . }}
+                {{- include "urbankiff.rcloneRustfsEnv" . | nindent 16 }}
+                {{- include "urbankiff.rcloneWasabiEnv" . | nindent 16 }}
+              resources:
+                {{- toYaml .Values.outils.ressources | nindent 16 }}
+              securityContext:
+                {{- include "urbankiff.securityContextConteneur" . | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}

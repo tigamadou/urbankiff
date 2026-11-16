@@ -1,0 +1,15 @@
+---
+# Rôles testables sans k3s : base et volet utilisateur de deploiement. Joué par lancer.sh.
+- name: Rôles testables sur conteneur
+  hosts: noeuds
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+    - /travail/vars.yml
+  vars:
+    deploiement_k8s: false
+    deploiement_script_requis: false
+  roles:
+    - base
+    - deploiement
+    - fermeture_root

@@ -1,0 +1,3 @@
+---
+k3s_dossier_telechargements: /usr/local/share/urbankiff
+k3s_jeton_serveur: /var/lib/rancher/k3s/server/node-token

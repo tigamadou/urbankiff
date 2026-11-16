@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Faux docker : journalise les arguments ; la longueur de l'entrée standard seulement quand elle est utilisée.
+set -euo pipefail
+: "${FAKE_LOG:?}" "${FAKE_STATE:?}"
+echo "docker $*" >> "$FAKE_LOG"
+lire_entree() { local c; c="$(cat; printf x)"; c="${c%x}"; echo "STDIN docker ${#c}" >> "$FAKE_LOG"; }
+case "$*" in
+  *--password-stdin*) lire_entree ;;
+  "run --rm -i"*) lire_entree ;;
+  "buildx imagetools inspect"*) [ -z "${FAKE_IMAGE_ABSENTE:-}" ] || { echo "not found" >&2; exit 1; } ;;
+esac

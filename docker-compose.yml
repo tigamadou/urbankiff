@@ -145,45 +145,6 @@ services:
         - RUSTFS_ADDRESS=0.0.0.0:9000
         - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
 
-  imgproxy:
-    image: darthsim/imgproxy:latest
-    container_name: imgproxy
-    environment:
-      - IMGPROXY_USE_S3=true
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_S3_ENDPOINT=http://minio:9000
-      - IMGPROXY_ALLOWED_SOURCES=s3://
-      - IMGPROXY_VALID_SCHEMAS=s3
-      - IMGPROXY_DEVELOPMENT_ERRORS_MODE=true
-      - AWS_S3_FORCE_PATH_STYLE=true
-      - IMGPROXY_S3_BUCKETS=${MINIO_DEFAULT_BUCKETS}
-      - IMGPROXY_S3_REGION=us-east-1
-      - IMGPROXY_USE_SIGNED_URLS=true
-      - IMGPROXY_S3_FORCE_PATH_STYLE=true
-      - IMGPROXY_S3_ENDPOINT=http://minio:9000
-      - IMGPROXY_BASE_URL=http://imgproxy:8080
-      - IMGPROXY_KEY=${IMGPROXY_KEY}
-      - IMGPROXY_SALT=${IMGPROXY_SALT}
-      - IMGPROXY_MAX_ANIMATION_FRAMES=300
-      - IMGPROXY_QUALITY=80
-      - IMGPROXY_FORMAT_QUALITY=webp=60
-      - IMGPROXY_MAX_SRC_RESOLUTION=8192
-      - IMGPROXY_MAX_SRC_FILE_SIZE=32
-      - IMGPROXY_READ_REQUEST_TIMEOUT=10
-      - IMGPROXY_TIMEOUT=10
-      - IMGPROXY_DOWNLOAD_TIMEOUT=10
-      - IMGPROXY_TTL=31536000
-      - IMGPROXY_CACHE_CONTROL_PASSTHROUGH=true
-    ports:
-      - "1055:8080"
-    depends_on:
-      - minio
-    networks:
-      - URBANKIFF
-    restart: unless-stopped
-    links:
-      - minio
   redis:
     image: redis:alpine
     container_name: ${REDIS_ENDPOINT}

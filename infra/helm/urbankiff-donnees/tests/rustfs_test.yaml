@@ -1,0 +1,156 @@
+suite: rustfs
+templates:
+  - templates/rustfs.yaml
+  - templates/rustfs-bucket-job.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: StatefulSet et Service RustFS sur 9000
+    template: templates/rustfs.yaml
+    asserts:
+      - isKind:
+          of: StatefulSet
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-rustfs
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: rustfs/rustfs:1.0.1
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: urbankiff-rustfs
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].port
+          value: 9000
+        documentIndex: 1
+  - it: identifiants par secretKeyRef, console désactivée, aucun hôte public
+    template: templates/rustfs.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: MINIO_ROOT_USER
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: MINIO_ROOT_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_CONSOLE_ENABLE
+            value: "false"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_ADDRESS
+            value: 0.0.0.0:9000
+  - it: volumes /data et /tmp, lecture seule, durcissement, sondes, limites, empreinte
+    template: templates/rustfs.yaml
+    documentIndex: 0
+    set:
+      secretsChecksum: abc123
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: donnees
+            mountPath: /data
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 192Mi
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: rustfs
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: abc123
+  - it: Job de création idempotente du bucket, hook après installation et mise à jour
+    template: templates/rustfs-bucket-job.yaml
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation,hook-succeeded
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: rustfs-bucket
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["mkdir", "rustfs:$(BUCKET)"]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BUCKET
+            valueFrom:
+              configMapKeyRef:
+                name: urbankiff-config
+                key: MINIO_DEFAULT_BUCKETS
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RCLONE_CONFIG_RUSTFS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: MINIO_ROOT_USER
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RCLONE_CONFIG_RUSTFS_ENDPOINT
+            value: http://urbankiff-rustfs:9000
+  - it: Job du bucket durci et borné
+    template: templates/rustfs-bucket-job.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 128Mi
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600

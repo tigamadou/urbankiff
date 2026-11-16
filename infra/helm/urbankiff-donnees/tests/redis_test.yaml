@@ -1,0 +1,144 @@
+suite: redis
+templates:
+  - templates/redis.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: StatefulSet et Service Redis
+    asserts:
+      - isKind:
+          of: StatefulSet
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-redis
+        documentIndex: 0
+      - equal:
+          path: spec.serviceName
+          value: urbankiff-redis
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].port
+          value: 6379
+        documentIndex: 1
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: redis
+        documentIndex: 1
+  - it: libellés du pod
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: redis
+  - it: mot de passe par secretKeyRef, jamais en argument ni en valeur
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: REDIS_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDISCLI_AUTH
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: REDIS_PASSWORD
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'requirepass %s.*"\$REDIS_PASSWORD".*> /tmp/redis.conf'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'appendonly yes'
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'requirepass \S+\s*$'
+  - it: démarre avec la configuration écrite dans /tmp
+    documentIndex: 0
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'exec redis-server /tmp/redis.conf'
+  - it: système de fichiers en lecture seule avec emptyDir sur /tmp et volume sur /data
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: donnees
+            mountPath: /data
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: donnees
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: local-path
+  - it: durcissement, sondes, limites, jeton de compte de service
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 64Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 32Mi
+  - it: sondes authentifiées sans mot de passe en argument
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+  - it: annotation d'empreinte des secrets sur le pod
+    documentIndex: 0
+    set:
+      secretsChecksum: abc123
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: abc123

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Faux gh : jeton et utilisateur fixes, variables d'environnement lues dans $FAKE_STATE/variables-<env>.txt (NOM=valeur).
+set -euo pipefail
+: "${FAKE_LOG:?}" "${FAKE_STATE:?}"
+echo "gh $*" >> "$FAKE_LOG"
+env_de() { local i; for ((i = 1; i <= $#; i++)); do [ "${!i}" = "--env" ] && { j=$((i + 1)); echo "${!j}"; }; done; }
+case "$1 $2" in
+  "auth token") printf '%s\n' "Jeton-Repere-Gh9" ;;
+  "api user") echo "testeur" ;;
+  "variable list") cat "$FAKE_STATE/variables-$(env_de "$@").txt" ;;
+  "variable get")
+    grep "^$3=" "$FAKE_STATE/variables-$(env_de "$@").txt" | head -1 | cut -d= -f2- ;;
+  *) echo "faux gh : commande inattendue : $*" >&2; exit 1 ;;
+esac

@@ -1,0 +1,32 @@
+---
+- name: Dossier de configuration de k3s
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configuration du serveur k3s
+  ansible.builtin.template:
+    src: config-serveur.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Redémarrer k3s
+
+- name: Installation de k3s
+  ansible.builtin.include_tasks: installer.yml
+  vars:
+    k3s_mode: server
+
+- name: Application de la configuration
+  ansible.builtin.meta: flush_handlers
+
+- name: Nœud prêt
+  ansible.builtin.command: k3s kubectl wait node --all --for=condition=Ready --timeout=300s
+  changed_when: false
+
+- name: Installation de Helm
+  ansible.builtin.include_tasks: helm.yml

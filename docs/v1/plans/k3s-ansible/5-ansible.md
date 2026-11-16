@@ -38,35 +38,35 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé · Prochaine tâche : aucune
 
-- [ ] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
-  - [ ] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
-  - [ ] Test rouge : `make infra-lint` échoue (rien à vérifier / cible absente)
-  - [ ] `Dockerfile`, `ansible.cfg`, `requirements.yml`, `.ansible-lint`, `inventory.example.yml`, `group_vars/all.yml`
-  - [ ] `make/infra.mk` : `infra-image`, `infra-ansible`, `infra-lint`
-- [ ] **Tâche 2** `site.yml` et assert des variables obligatoires · `feature/k3s-ansible-ansible`
-  - [ ] Test d'échec de l'assert (inventaire invalide), rouge puis vert
-  - [ ] `site.yml` (deux plays, rôles vides) ; cible `infra-test-assert`
-- [ ] **Tâche 3** Harnais de test sur conteneur Ubuntu 24.04 (rouge) · `feature/k3s-ansible-ansible`
-  - [ ] Image cible systemd + sshd, script `tests/lancer.sh`, `tests/verifier.yml`, cible `infra-test`
-  - [ ] Constater l'échec des vérifications (rôles vides)
-- [ ] **Tâche 4** Rôle `base` · `feature/k3s-ansible-ansible`
-  - [ ] Paquets, mises à jour auto, administrateurs, sudo, suppression des comptes absents
-  - [ ] sshd durci, ufw, fail2ban
-  - [ ] `make infra-test` vert pour `base` (deux passages, zéro changement au second)
-- [ ] **Tâche 5** Rôle `k3s` (serveur ou agent, Helm) · `feature/k3s-ansible-ansible`
-  - [ ] Configuration `config.yaml` (secrets-encryption, wireguard-native), installation épinglée et vérifiée
-  - [ ] Jeton lu sur le serveur, agent ; Helm
-  - [ ] `infra-lint` vert (k3s réel non testé localement)
-- [ ] **Tâche 6** Manifestes vendus et rôle `plateforme` · `feature/k3s-ansible-ansible`
-  - [ ] `make infra-vendre` : téléchargement en conteneur, sommes SHA-256, contrôle `infra-lint`
-  - [ ] Rôle : application différentielle, attentes, ClusterIssuer
-- [ ] **Tâche 7** Rôle `deploiement` · `feature/k3s-ansible-ansible`
-  - [ ] Volet utilisateur (compte, `deploy.env`, script, `authorized_keys`) testé sur conteneur
-  - [ ] Volet Kubernetes (namespaces, ServiceAccount, Role, kubeconfig par environnement), non testé localement
-- [ ] **Tâche 8** Documentation `docs/v1/infra/serveur.md` · `feature/k3s-ansible-ansible`
-- [ ] **Tâche 9** Vérification du lot
+- [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
+  - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
+  - [x] Test rouge : `make infra-lint` échoue (rien à vérifier / cible absente)
+  - [x] `Dockerfile`, `ansible.cfg`, `requirements.yml`, `.ansible-lint`, `inventory.example.yml`, `group_vars/all.yml`
+  - [x] `make/infra.mk` : `infra-image`, `infra-ansible`, `infra-lint`
+- [x] **Tâche 2** `site.yml` et assert des variables obligatoires · `feature/k3s-ansible-ansible`
+  - [x] Test d'échec de l'assert (inventaire invalide), rouge puis vert
+  - [x] `site.yml` (deux plays, rôles vides) ; cible `infra-test-assert`
+- [x] **Tâche 3** Harnais de test sur conteneur Ubuntu 24.04 (rouge) · `feature/k3s-ansible-ansible`
+  - [x] Image cible systemd + sshd, script `tests/lancer.sh`, `tests/verifier.yml`, cible `infra-test`
+  - [x] Constater l'échec des vérifications (rôles vides)
+- [x] **Tâche 4** Rôle `base` · `feature/k3s-ansible-ansible`
+  - [x] Paquets, mises à jour auto, administrateurs, sudo, suppression des comptes absents
+  - [x] sshd durci, ufw, fail2ban
+  - [x] `make infra-test` vert pour `base` (deux passages, zéro changement au second)
+- [x] **Tâche 5** Rôle `k3s` (serveur ou agent, Helm) · `feature/k3s-ansible-ansible`
+  - [x] Configuration `config.yaml` (secrets-encryption, wireguard-native), installation épinglée et vérifiée
+  - [x] Jeton lu sur le serveur, agent ; Helm
+  - [x] `infra-lint` vert (k3s réel non testé localement)
+- [x] **Tâche 6** Manifestes vendus et rôle `plateforme` · `feature/k3s-ansible-ansible`
+  - [x] `make infra-vendre` : téléchargement en conteneur, sommes SHA-256, contrôle `infra-lint`
+  - [x] Rôle : application différentielle, attentes, ClusterIssuer
+- [x] **Tâche 7** Rôle `deploiement` · `feature/k3s-ansible-ansible`
+  - [x] Volet utilisateur (compte, `deploy.env`, script, `authorized_keys`) testé sur conteneur
+  - [x] Volet Kubernetes (namespaces, ServiceAccount, Role, kubeconfig par environnement), non testé localement
+- [x] **Tâche 8** Documentation `docs/v1/infra/serveur.md` · `feature/k3s-ansible-ansible`
+- [x] **Tâche 9** Vérification du lot
 
 > Reprise : (vide)
 

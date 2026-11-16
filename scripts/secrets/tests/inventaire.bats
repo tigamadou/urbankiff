@@ -18,3 +18,22 @@ setup() {
   [ -d "$RACINE/docs/v1/infra" ]
   ! grep -rnE '^[[:space:]]*(export[[:space:]]+)?[A-Z][A-Z0-9_]*=[^[:space:]<]' "$RACINE/docs/v1/infra" || false
 }
+
+@test "contrat Secrets du lot nettoyage : Wasabi present, imgproxy absent, secrets de deploiement documentes" {
+  for n in WASABI_ACCESS_KEY_ID WASABI_SECRET_ACCESS_KEY; do
+    grep -q "^$n saisie" "$RACINE/scripts/secrets/secrets.txt"
+  done
+  for n in WASABI_REGION WASABI_BUCKET; do
+    grep -q "^$n=" "$RACINE"/scripts/secrets/variables-prod.txt
+    grep -q "^$n=" "$RACINE"/scripts/secrets/variables-preprod.txt
+  done
+  ! grep -rq 'IMGPROXY_' "$RACINE"/scripts/secrets/secrets.txt "$RACINE"/scripts/secrets/variables-*.txt
+  for n in DEPLOY_SSH_KEY DEPLOY_HOST DEPLOY_KNOWN_HOSTS; do
+    grep -q "\`$n\`" "$INVENTAIRE"
+    ! grep -q "^$n" "$RACINE"/scripts/secrets/secrets.txt "$RACINE"/scripts/secrets/variables-*.txt
+  done
+  for n in POSTGRES_PASSWORD; do ! grep -q "^$n" "$RACINE/scripts/secrets/secrets.txt"; done
+  for n in POSTGRES_USER POSTGRES_DB MINIO_ENDPOINT REACT_APP_MINIO_ENDPOINT; do
+    ! grep -q "^$n=" "$RACINE"/scripts/secrets/variables-*.txt
+  done
+}

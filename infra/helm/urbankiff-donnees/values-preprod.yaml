@@ -1,0 +1,22 @@
+environnement: preprod
+
+postgres:
+  ressources:
+    requests:
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+redis:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+rustfs:
+  ressources:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 192Mi

@@ -4,6 +4,8 @@ import sys
 import django_heroku
 import datetime
 
+from django.core.exceptions import ImproperlyConfigured
+
 
 # ==================================================================================================
 # ENVIRONMENT SETTINGS
@@ -37,7 +39,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))).replace('/project', '')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'local')
 DEBUG = False if ENV == PRODUCTION else True
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '*').split(',') if host.strip()]
+if ENV in [STAGING, PRODUCTION] and ('ALLOWED_HOSTS' not in os.environ or '*' in ALLOWED_HOSTS):
+    raise ImproperlyConfigured('ALLOWED_HOSTS doit lister les hôtes servis, sans « * », en staging et en production.')
 
 AUTH_USER_MODEL = 'user.User'
 
@@ -263,17 +267,10 @@ RESET_PASSWORD_URL = '{}{}'.format(
 # ==================================================================================================
 
 
-AWS_ACCESS_KEY_ID = os.environ.get('BUCKETEER_AWS_ACCESS_KEY_ID')
-AWS_DEFAULT_REGION = os.environ.get('BUCKETEER_AWS_REGION')
-AWS_SECRET_ACCESS_KEY = os.environ.get('BUCKETEER_AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('BUCKETEER_BUCKET_NAME')
+AWS_ACCESS_KEY_ID = None
+AWS_SECRET_ACCESS_KEY = None
+AWS_STORAGE_BUCKET_NAME = None
 AWS_LOCATION = ''
-AWS_DEFAULT_ACL = 'public-read'
-AWS_QUERYSTRING_AUTH = False
-
-if AWS_ACCESS_KEY_ID:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Enable file resize task by uncommenting the task decorator for apps.file.tasks.resize_images()
 # How often to check for images to resizes (in seconds)
@@ -318,7 +315,8 @@ else:
 # ==================================================================================================
 
 if ENV in [STAGING, PRODUCTION]:
-    django_heroku.settings(locals(), staticfiles=False)
+    # allowed_hosts=False : sinon django_heroku impose ALLOWED_HOSTS = ['*'].
+    django_heroku.settings(locals(), staticfiles=False, allowed_hosts=False)
 
 if TESTING:
     try:

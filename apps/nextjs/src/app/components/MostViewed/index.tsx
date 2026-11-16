@@ -18,7 +18,7 @@ type itemType = {
 
 const MostViewed = async ({slug}: { slug: string}) => {
 
-  const data = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchmostview/fr/${slug}`);
+  const data = await fetch(`${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchmostview/fr/${slug}`);
   const posts = await data.json();
 
   return (

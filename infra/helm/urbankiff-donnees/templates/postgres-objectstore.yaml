@@ -1,0 +1,23 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: urbankiff-objectstore
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "postgres") | nindent 4 }}
+spec:
+  retentionPolicy: {{ .Values.postgres.retention }}
+  configuration:
+    destinationPath: {{ printf "s3://%s/%spg" (include "urbankiff.wasabiBucket" .) .Values.wasabi.prefixeBase }}
+    endpointURL: {{ include "urbankiff.wasabiEndpoint" . }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ .Values.secretName }}
+        key: WASABI_ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ .Values.secretName }}
+        key: WASABI_SECRET_ACCESS_KEY
+    data:
+      compression: gzip
+    wal:
+      compression: gzip

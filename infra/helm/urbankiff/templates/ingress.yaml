@@ -1,0 +1,35 @@
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $web := required "hosts.web est obligatoire" .Values.hosts.web -}}
+{{- $api := required "hosts.api est obligatoire" .Values.hosts.api -}}
+{{- $panel := required "hosts.panel est obligatoire" .Values.hosts.panel -}}
+{{- $ctx := . -}}
+{{- range $i, $r := list (dict "nom" "nextjs" "composant" "nextjs" "hote" $web "tls" "urbankiff-web-tls" "port" 3000) (dict "nom" "api" "composant" "api" "hote" $api "tls" "urbankiff-api-tls" "port" 8000) (dict "nom" "panel" "composant" "panel" "hote" $panel "tls" "urbankiff-panel-tls" "port" 8080) }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: urbankiff-{{ $r.nom }}
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" $ctx "composant" $r.composant) | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $ctx.Values.ingress.clusterIssuer }}
+spec:
+  ingressClassName: {{ $ctx.Values.ingress.classe }}
+  tls:
+    - hosts:
+        - {{ $r.hote }}
+      secretName: {{ $r.tls }}
+  rules:
+    - host: {{ $r.hote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: urbankiff-{{ $r.nom }}
+                port:
+                  number: {{ $r.port }}
+{{- end }}

@@ -1,0 +1,5 @@
+profile: production
+exclude_paths:
+  - .travail/
+  - roles/plateforme/files/
+  - inventory.yml

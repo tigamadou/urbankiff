@@ -1,0 +1,148 @@
+---
+# Vérifications après les deux passages, exécutées sur la cible (voir lancer.sh).
+- name: Vérifications de l'état final
+  hosts: noeuds
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+    - /travail/vars.yml
+  vars:
+    deploiement_script_requis: false
+    regle_connue: "^(22|80|443|6443|10250)/tcp|^51820/udp|^Anywhere"
+  tasks:
+    - name: Configuration sshd effective
+      ansible.builtin.command: sshd -T
+      register: sshd_effectif
+      changed_when: false
+
+    - name: Durcissement sshd effectif
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in sshd_effectif.stdout_lines"
+          - "'permitrootlogin no' in sshd_effectif.stdout_lines"
+          - "'maxauthtries 3' in sshd_effectif.stdout_lines"
+          - "'kbdinteractiveauthentication no' in sshd_effectif.stdout_lines"
+        quiet: true
+
+    - name: Pare-feu
+      ansible.builtin.command: ufw status verbose
+      register: ufw_etat
+      changed_when: false
+
+    - name: Pare-feu actif, entrée refusée par défaut, ports attendus
+      ansible.builtin.assert:
+        that:
+          - "'Status: active' in ufw_etat.stdout"
+          - "'deny (incoming)' in ufw_etat.stdout"
+          - ufw_etat.stdout is search('22/tcp\\s+ALLOW IN\\s+Anywhere')
+          - ufw_etat.stdout is search('80/tcp\\s+ALLOW IN\\s+Anywhere')
+          - ufw_etat.stdout is search('443/tcp\\s+ALLOW IN\\s+Anywhere')
+          - ufw_etat.stdout is search('6443/tcp\\s+ALLOW IN\\s+' ~ (ansible_host | regex_escape))
+          - ufw_etat.stdout is search('10250/tcp\\s+ALLOW IN\\s+' ~ (ansible_host | regex_escape))
+          - ufw_etat.stdout is search('51820/udp\\s+ALLOW IN\\s+' ~ (ansible_host | regex_escape))
+          - ufw_etat.stdout is search('Anywhere\\s+ALLOW IN\\s+10\\.42\\.0\\.0/16')
+          - ufw_etat.stdout is search('Anywhere\\s+ALLOW IN\\s+10\\.43\\.0\\.0/16')
+        quiet: true
+
+    - name: Aucune règle de port hors liste
+      ansible.builtin.assert:
+        that:
+          - ufw_etat.stdout_lines | select("search", "ALLOW IN") | reject("search", regle_connue) | list | length == 0
+        quiet: true
+
+    - name: Fichier sudoers valide
+      ansible.builtin.command: visudo -cf /etc/sudoers.d/urbankiff-admins
+      changed_when: false
+
+    - name: Comptes
+      ansible.builtin.getent:
+        database: passwd
+      register: comptes
+
+    - name: Compte absent de la liste supprimé, administrateur conservé
+      ansible.builtin.assert:
+        that:
+          - "'ancien' not in comptes.ansible_facts.getent_passwd"
+          - "'testadmin' in comptes.ansible_facts.getent_passwd"
+        quiet: true
+
+    - name: Répertoire personnel de l'ancien compte supprimé
+      ansible.builtin.stat:
+        path: /home/ancien
+      register: home_ancien
+      failed_when: home_ancien.stat.exists
+
+    - name: Groupes de l'administrateur
+      ansible.builtin.command: id -nG testadmin
+      register: groupes_admin
+      changed_when: false
+      failed_when: "'sudo' not in groupes_admin.stdout.split()"
+
+    - name: Service fail2ban actif
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+      check_mode: true
+      register: fail2ban_etat
+      failed_when: fail2ban_etat.changed
+
+    - name: Mot de passe du compte deploy verrouillé
+      ansible.builtin.command: passwd -S deploy
+      register: deploy_mdp
+      changed_when: false
+      failed_when: deploy_mdp.stdout.split()[1] != 'L'
+
+    - name: Fichier authorized_keys de deploy
+      ansible.builtin.stat:
+        path: /home/deploy/.ssh/authorized_keys
+      register: deploy_ak
+
+    - name: Fichier authorized_keys en 0600, propriétaire deploy
+      ansible.builtin.assert:
+        that:
+          - deploy_ak.stat.exists
+          - deploy_ak.stat.mode == '0600'
+          - deploy_ak.stat.pw_name == 'deploy'
+        quiet: true
+
+    - name: Contenu de authorized_keys
+      ansible.builtin.slurp:
+        src: /home/deploy/.ssh/authorized_keys
+      register: deploy_ak_contenu
+
+    - name: Exactement deux lignes, commande forcée par environnement
+      ansible.builtin.assert:
+        that:
+          - lignes_ak | length == 2
+          - lignes_ak | select("equalto", ligne_preprod) | list | length == 1
+          - lignes_ak | select("equalto", ligne_prod) | list | length == 1
+        quiet: true
+      vars:
+        lignes_ak: "{{ (deploy_ak_contenu.content | b64decode).splitlines() }}"
+        ligne_preprod: "command=\"/usr/local/bin/urbankiff-deploy preprod\",restrict {{ deploy_keys.preprod }}"
+        ligne_prod: "command=\"/usr/local/bin/urbankiff-deploy prod\",restrict {{ deploy_keys.prod }}"
+
+    - name: Fichiers de configuration par environnement
+      ansible.builtin.slurp:
+        src: "/etc/urbankiff/deploy.{{ item }}.env"
+      register: deploy_envs
+      loop: "{{ deploiement_envs | list }}"
+
+    - name: Clés URBANKIFF_ENV, GHCR_OWNER, NAMESPACE de chaque environnement
+      ansible.builtin.assert:
+        that:
+          - (item.content | b64decode) is search('URBANKIFF_ENV=' ~ item.item)
+          - (item.content | b64decode) is search('GHCR_OWNER=' ~ ghcr_owner)
+          - (item.content | b64decode) is search('NAMESPACE=' ~ deploiement_envs[item.item].namespace)
+          - (item.content | b64decode) is search('API_SERVER_CIDR=[0-9]{1,3}(\.[0-9]{1,3}){3}/32')
+        quiet: true
+      loop: "{{ deploy_envs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Script de déploiement, s'il est installé, en 0755 root
+      ansible.builtin.stat:
+        path: /usr/local/bin/urbankiff-deploy
+      register: script_deploiement
+      failed_when: script_deploiement.stat.exists and (script_deploiement.stat.mode != '0755' or script_deploiement.stat.pw_name != 'root')

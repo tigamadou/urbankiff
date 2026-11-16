@@ -1,0 +1,102 @@
+# prod ou preprod : obligatoire (voir values-prod.yaml et values-preprod.yaml)
+environnement: ""
+# empreinte des secrets, calculée par le script de déploiement : un changement redémarre les pods qui les lisent
+secretsChecksum: ""
+secretName: urbankiff-secrets
+
+image:
+  etiquette: ""
+  secretTirage: ""
+  rclone: rclone/rclone:1.68.2
+  redis: redis:7.4.1-alpine
+  rustfs: rustfs/rustfs:1.0.1
+  postgres: ghcr.io/cloudnative-pg/postgresql
+
+wasabi:
+  region: ""
+  endpoint: ""
+  bucket: ""
+  prefixeBase: ""
+
+reseau:
+  namespaceOperateur: cnpg-system
+  cidrPod: 10.42.0.0/16
+  cidrService: 10.43.0.0/16
+  cidrExclus:
+    - 10.42.0.0/16
+    - 10.43.0.0/16
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16
+  apiKubernetes:
+    # IP du nœud en /32 : obligatoire, imposée par le déploiement (--set reseau.apiKubernetes.cidr=<IP>/32)
+    cidr: ""
+    port: 6443
+
+postgres:
+  # version majeure : alignée ou supérieure à celle du dump à restaurer, jamais inférieure (spec § 5.11)
+  version: 15
+  base: urbankiff
+  utilisateur: urbankiff
+  stockage:
+    taille: 10Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+  # cron à six champs (secondes en premier) : tous les jours à 02:00
+  planification: "0 0 2 * * *"
+  retention: 30d
+  # nom sous lequel le cluster archive ses WAL et sauvegardes dans Wasabi
+  serveur: urbankiff-pg
+  # "on" ou "off" pour poser l'annotation cnpg.io/hibernation ; absente par défaut (le script de déploiement la bascule)
+  hibernation: ""
+  # restauration à un instant précis ; jamais active par défaut
+  restauration:
+    actif: false
+    instant: ""
+    serveurSource: ""
+
+redis:
+  stockage:
+    taille: 1Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+rustfs:
+  stockage:
+    taille: 10Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+
+# Jobs et CronJobs rclone (bucket, copie des fichiers, restauration)
+outils:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+sauvegardeFichiers:
+  planification: "30 3 * * *"
+
+# Job de restauration d'une sauvegarde déposée sous restauration/<date>/ du bucket Wasabi (spec § 5.10) :
+# absent par défaut, rendu seulement avec active: true
+restauration:
+  active: false
+  # chemin relatif à la racine du bucket, par exemple restauration/2026-12-01/ (obligatoire si active)
+  prefixe: ""
+  fichierDump: base.dump
+  copierFichiers: true
+  purger: true

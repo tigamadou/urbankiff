@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Call the backend API to validate the invitation token
     // Since there's no direct validation endpoint, we'll try to get invitation details
     // by attempting to validate the token format and checking with the backend
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
 
     if (!backendUrl) {
       console.error('Backend URL not configured');

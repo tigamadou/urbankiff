@@ -1,0 +1,66 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: urbankiff-panel
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "panel") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "panel" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "panel") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: panel
+          image: {{ include "urbankiff.imageFront" (dict "ctx" . "nom" "panel") }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.panel.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-panel
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "panel") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "panel" | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

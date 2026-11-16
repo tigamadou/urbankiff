@@ -1,0 +1,44 @@
+environnement: prod
+
+hosts:
+  web: urbankiff.com
+  api: api.urbankiff.com
+  panel: panel.urbankiff.com
+
+sms:
+  actif: true
+
+api:
+  ressources:
+    requests:
+      memory: 300Mi
+    limits:
+      memory: 512Mi
+
+workers:
+  ressources:
+    requests:
+      memory: 200Mi
+    limits:
+      memory: 384Mi
+
+migrations:
+  ressources:
+    requests:
+      memory: 200Mi
+    limits:
+      memory: 512Mi
+
+nextjs:
+  ressources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+panel:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi

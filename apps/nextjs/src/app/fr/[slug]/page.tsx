@@ -29,7 +29,7 @@ export async function generateMetadata(
   const slug = (await params).slug;
 
   try {
-    const data = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchpostdata/${slug}`, {
+    const data = await fetch(`${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchpostdata/${slug}`, {
       next: {
         revalidate: 300,
         tags: ['posts', 'single-post', slug],
@@ -76,7 +76,7 @@ const SinglePost = async ({
   const slug = (await params).slug;
 
   try {
-    const data = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/fetchpostdata/${slug}`, {
+    const data = await fetch(`${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/fetchpostdata/${slug}`, {
       next: {
         revalidate: 300,
         tags: ['posts', 'single-post', slug],
@@ -109,7 +109,7 @@ const SinglePost = async ({
     // viewCount
     } = post;
 
-    const viewRequest = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/post/record-view/${post.id}`, {
+    const viewRequest = await fetch(`${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/post/record-view/${post.id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ const SinglePost = async ({
       // No caching for POST requests (analytics)
     });
     await viewRequest.json();
-    // const adsRequest = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL}/ads/`)
+    // const adsRequest = await fetch(`${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/ads/`)
     // const ads = await adsRequest.json();
     // const media = await ads.find(({ uuid }: { uuid: string})=> uuid === 'banner_single_post')?.medias[0]
 
