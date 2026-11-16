@@ -30,7 +30,8 @@ reseau:
     - 192.168.0.0/16
     - 169.254.0.0/16
   apiKubernetes:
-    cidr: 0.0.0.0/0
+    # IP du nœud en /32 : obligatoire, imposée par le déploiement (--set reseau.apiKubernetes.cidr=<IP>/32)
+    cidr: ""
     port: 6443
 
 postgres:

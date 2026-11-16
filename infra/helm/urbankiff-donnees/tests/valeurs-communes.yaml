@@ -3,3 +3,6 @@ secretsChecksum: test
 wasabi:
   region: eu-central-2
   bucket: urbankiff-test
+reseau:
+  apiKubernetes:
+    cidr: 192.0.2.10/32

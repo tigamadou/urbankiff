@@ -142,6 +142,8 @@ noms_secrets = File.readlines(SECRETS_INVENTAIRE, chomp: true).reject { |l| l.st
   v = []
   politiques.each do |p|
     trouve(p, 'ipBlock') do |ip|
+      next if ip['cidr'].to_s.end_with?('/32') # une seule IP (nœud) : rien à exclure, et `except` hors du cidr serait refusé
+
       exceptions = ip['except'] || []
       v << "#{p['metadata']['name']} : #{ip['cidr']}" unless exceptions.include?(CIDR_POD) && exceptions.include?(CIDR_SERVICE)
     end
@@ -205,6 +207,16 @@ puts "limites en régime établi : #{regime} Mi ; plus gros Job : #{plus_gros_jo
 total = regime + plus_gros_job
 verifie 'preprod : limites mémoire en régime établi plus le plus gros Job sous le quota',
         total <= QUOTA_PREPROD_MI ? [] : ["#{total} Mi > #{QUOTA_PREPROD_MI} Mi"]
+
+# Marge assumée : le Job de migrations (crochet de déploiement) et le CronJob rclone (planifié la nuit) peuvent se
+# chevaucher exceptionnellement ; au-delà du quota, le pod du Job est refusé puis relancé (backoffLimit), et le CronJob
+# saute son tour. On borne donc le chevauchement à un seul CronJob (concurrencyPolicy: Forbid) et on affiche le pire cas.
+crons = docs.select { |d| d['kind'] == 'CronJob' }
+verifie 'preprod : les CronJobs interdisent l\'exécution concurrente (concurrencyPolicy: Forbid)',
+        crons.reject { |d| d.dig('spec', 'concurrencyPolicy') == 'Forbid' }.map { |d| nom(d) }
+limite_cron = crons.flat_map { |d| conteneurs(d.dig('spec', 'jobTemplate', 'spec', 'template', 'spec')).map { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
+migrations = pods(docs).select { |n, _, _, _| n.include?('migrations') }.flat_map { |_, spec, _, _| conteneurs(spec).map { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
+puts "pire chevauchement (migrations + CronJob) : #{regime + migrations + limite_cron} Mi pour un quota de #{QUOTA_PREPROD_MI} Mi (dépassement toléré, voir kubernetes.md)"
 
 if $echecs.positive?
   warn "#{$echecs} contrôle(s) transverse(s) en échec"

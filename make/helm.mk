@@ -17,7 +17,8 @@ HELM_SORTIE := .superpowers/helm
 ETIQUETTE ?= 0.0.0-test
 WASABI_REGION ?= eu-central-2
 WASABI_BUCKET ?= urbankiff-test
-HELM_SET := --set image.etiquette=$(ETIQUETTE) --set wasabi.region=$(WASABI_REGION) --set wasabi.bucket=$(WASABI_BUCKET) --set secretsChecksum=test
+NOEUD_CIDR ?= 192.0.2.10/32
+HELM_SET := --set reseau.apiKubernetes.cidr=$(NOEUD_CIDR) --set image.etiquette=$(ETIQUETTE) --set wasabi.region=$(WASABI_REGION) --set wasabi.bucket=$(WASABI_BUCKET) --set secretsChecksum=test
 
 HELM_RUN := docker run --rm -v "$(CURDIR)/$(HELM_DIR)":/charts:ro -w /charts $(HELM_IMAGE)
 CHARTS_CHOISIS := $(if $(CHART),$(CHART),$(HELM_CHARTS))
