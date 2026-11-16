@@ -65,9 +65,10 @@ tests:
                 - namespaceSelector:
                     matchLabels:
                       kubernetes.io/metadata.name: plateforme
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: cloudnative-pg
               ports:
-                - port: 5432
-                  protocol: TCP
                 - port: 8000
                   protocol: TCP
   - it: entrée de Redis depuis api, workers, migrations
@@ -111,12 +112,30 @@ tests:
           value:
             - port: 6443
               protocol: TCP
-      - equal:
+      - notExists:
           path: spec.egress[1].to[0].ipBlock.except
-          value: [10.42.0.0/16, 10.43.0.0/16]
+      - equal:
+          path: spec.egress[1].to[0].ipBlock.cidr
+          value: 192.0.2.10/32
       - lengthEqual:
           path: spec.egress
           count: 2
+  - it: refuse le rendu sans l'IP du nœud pour l'API Kubernetes
+    set:
+      reseau:
+        apiKubernetes:
+          cidr: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: reseau.apiKubernetes.cidr
+  - it: refuse une adresse ouverte à tout Internet pour l'API Kubernetes
+    set:
+      reseau:
+        apiKubernetes:
+          cidr: 0.0.0.0/0
+    asserts:
+      - failedTemplate:
+          errorPattern: /32
   - it: sorties des Jobs et du CronJob de fichiers
     documentIndex: 5
     asserts:

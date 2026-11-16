@@ -1,5 +1,9 @@
 {{- $env := include "urbankiff.environnement" . -}}
 {{- $ns := .Values.reseau.namespacePlateforme -}}
+{{- $noeud := required "reseau.apiKubernetes.cidr est obligatoire : IP du noeud en /32" .Values.reseau.apiKubernetes.cidr -}}
+{{- if not (hasSuffix "/32" $noeud) -}}
+{{- fail (printf "reseau.apiKubernetes.cidr doit etre une IP en /32 (recu %s)" $noeud) -}}
+{{- end -}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -28,9 +32,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ $ns }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cloudnative-pg
       ports:
-        - port: 5432
-          protocol: TCP
         - port: 8000
           protocol: TCP
 ---
@@ -104,10 +109,7 @@ spec:
           protocol: TCP
     - to:
         - ipBlock:
-            cidr: {{ .Values.reseau.apiKubernetes.cidr }}
-            except:
-              - {{ .Values.reseau.cidrPod }}
-              - {{ .Values.reseau.cidrService }}
+            cidr: {{ $noeud }}
       ports:
         - port: {{ .Values.reseau.apiKubernetes.port }}
           protocol: TCP
