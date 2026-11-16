@@ -6,3 +6,7 @@ flannel-backend: wireguard-native
 node-external-ip: {{ ansible_host }}
 tls-san:
   - {{ ansible_host }}
+# kube-proxy publie les NodePorts (dont ceux du LoadBalancer de Traefik) avant les règles ufw : on les limite à la
+# boucle locale, seuls 80 et 443 (hostPort de klipper-lb) restent joignables de l'extérieur.
+kube-proxy-arg:
+  - nodeport-addresses=127.0.0.0/8
