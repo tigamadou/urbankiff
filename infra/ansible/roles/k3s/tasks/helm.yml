@@ -1,0 +1,31 @@
+---
+- name: Version de Helm installée
+  ansible.builtin.command: helm version --template '{% raw %}{{ .Version }}{% endraw %}'
+  register: k3s_helm_installe
+  changed_when: false
+  failed_when: false
+
+- name: Installation de Helm {{ helm_version }}
+  when: helm_version != (k3s_helm_installe.stdout | trim)
+  vars:
+    helm_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+    helm_archive: "helm-{{ helm_version }}-linux-{{ helm_arch }}.tar.gz"
+  block:
+    - name: Archive de Helm (somme SHA-256 officielle vérifiée)
+      ansible.builtin.get_url:
+        url: "https://get.helm.sh/{{ helm_archive }}"
+        dest: "{{ k3s_dossier_telechargements }}/{{ helm_archive }}"
+        checksum: "sha256:https://get.helm.sh/{{ helm_archive }}.sha256sum"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Binaire helm
+      ansible.builtin.unarchive:
+        src: "{{ k3s_dossier_telechargements }}/{{ helm_archive }}"
+        dest: /usr/local/bin
+        remote_src: true
+        extra_opts: [--strip-components=1, --wildcards, "*/helm"]
+        owner: root
+        group: root
+        mode: "0755"

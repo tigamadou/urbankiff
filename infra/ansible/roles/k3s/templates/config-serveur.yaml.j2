@@ -1,0 +1,8 @@
+# Géré par Ansible.
+write-kubeconfig-mode: "0600"
+secrets-encryption: true
+# Le backend Flannel ne se change plus sans réinstaller le cluster : il est fixé ici, une fois pour toutes.
+flannel-backend: wireguard-native
+node-external-ip: {{ ansible_host }}
+tls-san:
+  - {{ ansible_host }}

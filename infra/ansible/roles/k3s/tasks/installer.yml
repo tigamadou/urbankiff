@@ -1,0 +1,32 @@
+---
+- name: Version de k3s installée
+  ansible.builtin.command: k3s --version
+  register: k3s_installee
+  changed_when: false
+  failed_when: false
+
+- name: Dossier des fichiers téléchargés
+  ansible.builtin.file:
+    path: "{{ k3s_dossier_telechargements }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Script d'installation de k3s (somme SHA-256 vérifiée)
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/k3s-io/k3s/{{ k3s_version | urlencode }}/install.sh"
+    dest: "{{ k3s_dossier_telechargements }}/k3s-install-{{ k3s_version }}.sh"
+    checksum: "sha256:{{ k3s_install_sha256 }}"
+    owner: root
+    group: root
+    mode: "0700"
+  when: k3s_version not in k3s_installee.stdout
+
+- name: Installation de k3s à la version épinglée
+  ansible.builtin.command: "{{ k3s_dossier_telechargements }}/k3s-install-{{ k3s_version }}.sh"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: "{{ k3s_mode }}"
+  when: k3s_version not in k3s_installee.stdout
+  changed_when: true

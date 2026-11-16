@@ -23,7 +23,7 @@ infra-ansible: infra-image ## Joue site.yml (LIMITE=<groupe ou hôte>, ARGS="--c
 
 infra-lint: infra-image ## ansible-lint, syntax-check, options k3s, manifestes vendus (SHA-256, versions)
 	docker run --rm -v "$(CURDIR)":/repo:ro -e ANSIBLE_HOME=/tmp/ansible $(ANSIBLE_IMAGE) \
-		sh -c 'ansible-lint --offline && ansible-playbook -i inventory.example.yml site.yml --syntax-check'
+		sh -c 'ansible-lint --offline && ansible-playbook -i inventory.example.yml site.yml --syntax-check && sh tests/controles.sh'
 
 infra-test-assert: infra-image ## Vérifie que site.yml refuse les inventaires invalides
 	docker run --rm -v "$(CURDIR)":/repo:ro -e ANSIBLE_HOME=/tmp/ansible $(ANSIBLE_IMAGE) sh tests/assert.sh

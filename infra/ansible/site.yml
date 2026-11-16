@@ -1,6 +1,6 @@
 ---
 # Prépare les nœuds k3s de zéro, de façon rejouable : make infra-ansible LIMITE=noeuds
-- name: Contrôle des variables, système de base et k3s
+- name: Contrôle des variables et système de base
   hosts: noeuds
   become: true
   gather_facts: false
@@ -60,6 +60,17 @@
       tags: [assertions]
   roles:
     - base
+
+- name: Installation de k3s sur le nœud serveur
+  hosts: serveur
+  become: true
+  roles:
+    - k3s
+
+- name: Installation de k3s sur les agents (jeton lu sur le serveur déjà installé)
+  hosts: agents
+  become: true
+  roles:
     - k3s
 
 - name: Plateforme et déploiement (nœud serveur)
