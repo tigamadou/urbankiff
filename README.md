@@ -9,20 +9,15 @@ Toutes les applications sont versionnées dans ce dépôt, avec leur historique 
 | `apps/api` | API Django | `urbankiff-api` |
 | `apps/nextjs` | Front public Next.js | `urbankiff-nextjs` |
 | `apps/panel` | Panel d'administration | `urbankiff-panel` |
-| `apps/minio` | Configuration de déploiement S3 | `urbankiff-minio` |
-| `apps/backup_service` | Sauvegardes | — |
 
 `apps/mobile` (Expo) reste un dépôt séparé (`urbankiff-mobile`), ignoré ici et cloné par `make init`.
 
 Les fichiers `.env` locaux des applications ne sont pas versionnés. Spec du passage en monorepo :
 `docs/v1/specs/2026-11-15-monorepo-devteam.md`.
 
-### Releases et déploiements
+### Déploiement
 
-Les workflows de `.github/workflows/` sont préfixés par l'application (`api-deploy-to-prod.yml`…). Une release ne
-déploie que l'application de son tag : `<app>/vX.Y.Z` (par exemple `api/v1.5.0`), pré-release pour la preprod,
-release publiée pour la prod. `minio` se déploie sur push vers `main` (prod) ou `staging` (preprod) quand
-`apps/minio/**` change.
+Le déploiement (k3s, Ansible, Helm) est décrit dans `docs/v1/specs/2026-11-16-k3s-ansible.md`.
 
 ### Passer un poste existant au monorepo
 
@@ -41,7 +36,7 @@ make init
 
 ```
 # Run
-make start-b
+make startdb
 ```
 
 ### Seed with fake data
