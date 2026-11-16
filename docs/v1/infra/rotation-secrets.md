@@ -51,9 +51,9 @@ gestionnaire de mots de passe ou directement par `make secrets-definir`. Cocher 
 
 - [x] `make secrets-scan` à zéro constat sur la branche de préparation — date : 2026-11-16
 - [x] Instantané créé, `make secrets-scan-historique DOSSIER=../urbankiff-public` à zéro constat — date : 2026-11-16 (commit 3e9cf9f)
-- [ ] `tigamadou/urbankiff` renommé en `tigamadou/urbankiff-archive` (reste privé) — date :
-- [ ] `tigamadou/urbankiff` créé, `development` et `main` poussées, branche par défaut `development`, dépôt passé en
-      public — date :
+- [x] `tigamadou/urbankiff` renommé en `tigamadou/urbankiff-archive` (reste privé) — date : 2026-11-16
+- [x] `tigamadou/urbankiff` créé, `development` et `main` poussées, branche par défaut `development`, dépôt passé en
+      public — date : 2026-11-16 (premier push refusé par la protection au push : jeton Google dans un commentaire, retiré)
 
 ## 3. Nouvelles valeurs
 
@@ -64,9 +64,21 @@ Avant de lancer le script, créer chez chaque fournisseur la nouvelle valeur (sa
       permet de basculer avant de révoquer le principal) — date :
 - [ ] Google Cloud : nouveau secret client OAuth créé (APIs & Services → Credentials → client OAuth → ajouter un
       secret) — date :
-- [ ] Environnements `preprod` et `prod` créés, analyse de secrets et protection au push activées — date :
-- [ ] `make secrets-definir ENV=preprod REPO=tigamadou/urbankiff` : code 0 — date :
-- [ ] `make secrets-definir ENV=prod REPO=tigamadou/urbankiff` : code 0 — date :
+- [x] Environnements `preprod` et `prod` créés, analyse de secrets et protection au push activées — date : 2026-11-16 (prod : approbation obligatoire, tags v* seulement)
+- [x] `make secrets-definir ENV=preprod REPO=tigamadou/urbankiff` : code 0 — date : 2026-11-16 (14 secrets, 18 variables)
+- [x] `make secrets-definir ENV=prod REPO=tigamadou/urbankiff` : code 0 — date : 2026-11-16 (14 secrets, 18 variables)
+
+> État au 2026-11-16 : les six secrets des fournisseurs (`SMTP_*`, `TWILIO_*`, `SOCIAL_AUTH_GOOGLE_OAUTH2_*`) ont
+> reçu des **valeurs provisoires** dans `preprod` et `prod`. Les vraies valeurs seront créées dans les consoles puis
+> posées avec `SEULEMENT="<noms>" make secrets-definir ENV=<env> REPO=tigamadou/urbankiff` avant le premier
+> déploiement. Les révocations de la section 4 attendent ces nouvelles valeurs.
+
+> État au 2026-11-16 : GitHub Actions ne crée aucune exécution sur le compte (quota inclus du mois épuisé, aucune
+> cause trouvée côté dépôt ni côté budget). Le check obligatoire `ci-ok` a été **retiré temporairement** de la
+> protection de `development` et `main` (force push et suppression restent interdits).
+
+- [ ] Actions de nouveau fonctionnel (une PR déclenche `CI devteam`) et `ci-ok` rétabli comme check obligatoire sur
+      `development` et `main` — date :
 
 ## 4. Révocations
 

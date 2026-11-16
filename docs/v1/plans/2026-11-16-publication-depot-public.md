@@ -50,19 +50,19 @@ et sur les serveurs sont faites ou autorisées par le développeur.
 
 ## Avancement
 
-Statut : 🟡 en cours (tâches 1 à 5 ✅ le 2026-11-16) · Prochaine tâche : 6
+Statut : 🟡 en cours (tâches 1 à 6 ✅ le 2026-11-16, tâche 7 en cours) · Prochaine tâche : 7 (PR d essai)
 
 - [x] **Tâche 1** Script de définition des secrets
 - [x] **Tâche 2** Inventaire et runbook
 - [x] **Tâche 3** Nettoyage de l'arbre
 - [x] **Tâche 4** Scan gitleaks
 - [x] **Tâche 5** Mesures conservatoires sur A et B (développeur)
-- [ ] **Tâche 6** Instantané et nouveau dépôt public
+- [x] **Tâche 6** Instantané et nouveau dépôt public
 - [ ] **Tâche 7** Configuration GitHub et rotation
 - [ ] **Tâche 8** Révocations chez les fournisseurs (développeur)
 - [ ] **Tâche 9** Clones locaux et vérification finale
 
-> Reprise : 2026-11-16, branche chore/publication du checkout principal, rien de commité. Tâches 1 à 4 faites, revue finale corrigée (FCM, prodseed, idempotence, journal Docker, inventaire, Caddy). Tâche 5 : A et B terminés le 2026-11-16 (services arrêtés, pare-feu 22 seul, connexion SSH par mot de passe désactivée, clé de déploiement retirée), projet Firebase supprimé : tâche 5 terminée. Prochaine : tâche 6 (instantané).
+> Reprise : 2026-11-16, branche chore/publication du checkout principal, rien de commité. Tâches 1 à 4 faites, revue finale corrigée (FCM, prodseed, idempotence, journal Docker, inventaire, Caddy). Tâche 5 : A et B terminés le 2026-11-16 (services arrêtés, pare-feu 22 seul, connexion SSH par mot de passe désactivée, clé de déploiement retirée), projet Firebase supprimé : tâche 5 terminée. Tâche 6 : instantané publié le 2026-11-16 (tigamadou/urbankiff public, archive privée). Tâche 7 : environnements prod et preprod créés, 14 secrets et 18 variables chacun, development et main protégées (ci-ok, enforce_admins) ; reste la PR d essai.
 
 Statuts : ⬜ à faire · 🟡 en cours · ✅ terminé. Cocher une case **seulement après vérification verte**.
 
