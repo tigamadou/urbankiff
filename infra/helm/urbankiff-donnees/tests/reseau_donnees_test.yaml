@@ -7,7 +7,7 @@ tests:
   - it: liste exhaustive des politiques des données
     asserts:
       - hasDocuments:
-          count: 7
+          count: 8
       - equal:
           path: metadata.name
           value: postgres-entree
@@ -142,3 +142,30 @@ tests:
       - equal:
           path: spec.egress[0].ports[0].port
           value: 5432
+  - it: sortie du Job de migrations dans le chart déployé avant (crochet pre-install)
+    documentIndex: 7
+    asserts:
+      - equal:
+          path: metadata.name
+          value: migrations-sortie
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 5432
+      - equal:
+          path: spec.egress[1].ports[0].port
+          value: 6379
+      - equal:
+          path: spec.egress[2].ports[0].port
+          value: 9000
+      - equal:
+          path: spec.egress[3].ports
+          value:
+            - port: 443
+              protocol: TCP
+            - port: 465
+              protocol: TCP
+            - port: 587
+              protocol: TCP

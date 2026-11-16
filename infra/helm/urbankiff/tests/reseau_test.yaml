@@ -98,7 +98,7 @@ tests:
           value:
             - port: 8089
               protocol: TCP
-  - it: sorties de l'api, des workers et des migrations
+  - it: sorties de l'api et des workers (celles des migrations sont dans le chart des données)
     documentIndex: 4
     asserts:
       - equal:
@@ -106,7 +106,7 @@ tests:
           value:
             - key: app.kubernetes.io/component
               operator: In
-              values: [api, workers, migrations]
+              values: [api, workers]
       - equal:
           path: spec.podSelector.matchLabels
           value:
