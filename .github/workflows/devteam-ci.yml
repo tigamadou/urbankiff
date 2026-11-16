@@ -11,9 +11,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Aucun droit par défaut : chaque job ne reçoit que la lecture du dépôt dont il a besoin pour le checkout.
+permissions: {}
+
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       api: ${{ steps.filtre.outputs.api }}
       nextjs: ${{ steps.filtre.outputs.nextjs }}
@@ -22,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: filtre
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
@@ -39,8 +45,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Fichiers d'environnement de développement
         run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
       - name: Identifiants Twilio factices (non secrets)
@@ -57,8 +67,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.nextjs == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Fichiers d'environnement de développement
         run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
       - run: make lint-nextjs
@@ -69,8 +83,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.panel == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Fichiers d'environnement de développement
         run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
       - run: make lint-panel
