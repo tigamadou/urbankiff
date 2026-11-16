@@ -1,0 +1,15 @@
+---
+base_gerer_ufw: true
+base_paquets:
+  - ufw
+  - fail2ban
+  - python3-systemd
+  - unattended-upgrades
+  - ca-certificates
+  - curl
+# Comptes jamais supprimés en plus de admin_users (uid 1000 à 59999)
+base_comptes_conserves:
+  - deploy
+  - nobody
+base_uid_min: 1000
+base_uid_max: 59999

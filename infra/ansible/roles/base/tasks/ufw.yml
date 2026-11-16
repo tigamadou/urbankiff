@@ -1,0 +1,37 @@
+---
+# SSH d'abord : ufw n'est activé qu'après, pour ne pas couper la connexion en cours.
+- name: Pare-feu, SSH, HTTP et HTTPS ouverts à tous
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["22", "80", "443"]
+
+- name: Pare-feu, ports du cluster entre les IP des nœuds
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item.0 }}"
+    port: "{{ item.1.port }}"
+    proto: "{{ item.1.proto }}"
+  loop: "{{ noeuds_ip | product(ports_cluster) | list }}"
+  loop_control:
+    label: "{{ item.0 }} {{ item.1.port }}/{{ item.1.proto }}"
+  vars:
+    noeuds_ip: "{{ groups['noeuds'] | map('extract', hostvars, 'ansible_host') | list }}"
+
+- name: Pare-feu, réseaux internes de k3s (pods vers l'hôte)
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item }}"
+  loop: "{{ reseaux_internes_k3s }}"
+
+- name: Pare-feu, sortie autorisée
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+- name: Pare-feu, entrée refusée par défaut puis activé
+  community.general.ufw:
+    state: enabled
+    default: deny
+    direction: incoming

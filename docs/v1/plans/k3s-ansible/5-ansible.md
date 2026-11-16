@@ -38,7 +38,7 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : 🟡 en cours · Prochaine tâche : 5
 
 - [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
   - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
@@ -51,10 +51,10 @@ Statut : 🟡 en cours · Prochaine tâche : 4
 - [x] **Tâche 3** Harnais de test sur conteneur Ubuntu 24.04 (rouge) · `feature/k3s-ansible-ansible`
   - [x] Image cible systemd + sshd, script `tests/lancer.sh`, `tests/verifier.yml`, cible `infra-test`
   - [x] Constater l'échec des vérifications (rôles vides)
-- [ ] **Tâche 4** Rôle `base` · `feature/k3s-ansible-ansible`
-  - [ ] Paquets, mises à jour auto, administrateurs, sudo, suppression des comptes absents
-  - [ ] sshd durci, ufw, fail2ban
-  - [ ] `make infra-test` vert pour `base` (deux passages, zéro changement au second)
+- [x] **Tâche 4** Rôle `base` · `feature/k3s-ansible-ansible`
+  - [x] Paquets, mises à jour auto, administrateurs, sudo, suppression des comptes absents
+  - [x] sshd durci, ufw, fail2ban
+  - [x] `make infra-test` vert pour `base` (deux passages, zéro changement au second)
 - [ ] **Tâche 5** Rôle `k3s` (serveur ou agent, Helm) · `feature/k3s-ansible-ansible`
   - [ ] Configuration `config.yaml` (secrets-encryption, wireguard-native), installation épinglée et vérifiée
   - [ ] Jeton lu sur le serveur, agent ; Helm

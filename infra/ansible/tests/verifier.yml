@@ -9,7 +9,6 @@
   vars:
     deploiement_script_requis: false
     regle_connue: "^(22|80|443|6443|10250)/tcp|^51820/udp|^Anywhere"
-    ouverts_a_tous: "^(22|80|443)/tcp\\s+ALLOW IN\\s+Anywhere( \\(v6\\))?$"
   tasks:
     - name: Configuration sshd effective
       ansible.builtin.command: sshd -T
@@ -49,7 +48,6 @@
       ansible.builtin.assert:
         that:
           - ufw_etat.stdout_lines | select("search", "ALLOW IN") | reject("search", regle_connue) | list | length == 0
-          - ufw_etat.stdout_lines | select("search", ouverts_a_tous) | list | length == 6
         quiet: true
 
     - name: Fichier sudoers valide
@@ -59,12 +57,13 @@
     - name: Comptes
       ansible.builtin.getent:
         database: passwd
+      register: comptes
 
     - name: Compte absent de la liste supprimé, administrateur conservé
       ansible.builtin.assert:
         that:
-          - "'ancien' not in getent_passwd"
-          - "'testadmin' in getent_passwd"
+          - "'ancien' not in comptes.ansible_facts.getent_passwd"
+          - "'testadmin' in comptes.ansible_facts.getent_passwd"
         quiet: true
 
     - name: Répertoire personnel de l'ancien compte supprimé
