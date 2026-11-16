@@ -58,3 +58,5 @@ ifneq ($(wildcard devteam.agent.conf),)
 endif
 
 -include make/secrets.mk
+
+-include $(filter-out make/devteam.mk make/standard.mk make/secrets.mk make/devteam-agent.mk,$(wildcard make/*.mk))
