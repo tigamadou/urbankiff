@@ -39,6 +39,9 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 20
             timeoutSeconds: 3
+          env:
+            - name: BACKEND_URL
+              value: http://urbankiff-api:8000
           resources:
             {{- toYaml .Values.nextjs.ressources | nindent 12 }}
           securityContext:
