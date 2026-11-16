@@ -34,7 +34,7 @@ fabriqué par le test, sans aucune donnée réelle.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 7
+Statut : 🟡 en cours · Prochaine tâche : 8
 
 - [x] **Tâche 1** Squelette : dossier ignoré, cible de tests, bibliothèque commune · `feature/k3s-ansible-restauration`
   - [x] test bats de la bibliothèque (détection de version, garde-fous d'arguments), échec constaté
@@ -52,7 +52,7 @@ Statut : 🟡 en cours · Prochaine tâche : 7
   - [x] tests bats : décomptes égaux ; un écart provoqué est détecté
   - [x] implémentation
 - [x] **Tâche 6** Cibles `make sauvegarde-inspecter` et `sauvegarde-repeter`
-- [ ] **Tâche 7** Procédure `docs/v1/infra/premier-deploiement-prod.md`
+- [x] **Tâche 7** Procédure `docs/v1/infra/premier-deploiement-prod.md`
 - [ ] **Tâche 8** Vérification du lot
 
 > Reprise : (vide)
