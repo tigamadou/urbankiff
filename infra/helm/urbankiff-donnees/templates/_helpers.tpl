@@ -57,3 +57,45 @@ ipBlock:
   except:
     {{- toYaml .Values.reseau.cidrExclus | nindent 4 }}
 {{- end -}}
+
+{{/* Configuration rclone du remote « rustfs » (stockage interne), par variables d'environnement. */}}
+{{- define "urbankiff.rcloneRustfsEnv" -}}
+- name: RCLONE_CONFIG_RUSTFS_TYPE
+  value: s3
+- name: RCLONE_CONFIG_RUSTFS_PROVIDER
+  value: Other
+- name: RCLONE_CONFIG_RUSTFS_ENDPOINT
+  value: http://urbankiff-rustfs:9000
+- name: RCLONE_CONFIG_RUSTFS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.secretName }}
+      key: MINIO_ROOT_USER
+- name: RCLONE_CONFIG_RUSTFS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.secretName }}
+      key: MINIO_ROOT_PASSWORD
+{{- end -}}
+
+{{/* Configuration rclone du remote « wasabi ». */}}
+{{- define "urbankiff.rcloneWasabiEnv" -}}
+- name: RCLONE_CONFIG_WASABI_TYPE
+  value: s3
+- name: RCLONE_CONFIG_WASABI_PROVIDER
+  value: Wasabi
+- name: RCLONE_CONFIG_WASABI_ENDPOINT
+  value: {{ include "urbankiff.wasabiEndpoint" . | trimPrefix "https://" }}
+- name: RCLONE_CONFIG_WASABI_REGION
+  value: {{ .Values.wasabi.region | quote }}
+- name: RCLONE_CONFIG_WASABI_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.secretName }}
+      key: WASABI_ACCESS_KEY_ID
+- name: RCLONE_CONFIG_WASABI_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.secretName }}
+      key: WASABI_SECRET_ACCESS_KEY
+{{- end -}}

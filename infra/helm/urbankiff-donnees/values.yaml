@@ -58,3 +58,31 @@ postgres:
     actif: false
     instant: ""
     serveurSource: ""
+
+redis:
+  stockage:
+    taille: 1Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+rustfs:
+  stockage:
+    taille: 10Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+
+# Jobs et CronJobs rclone (bucket, copie des fichiers, restauration)
+outils:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
