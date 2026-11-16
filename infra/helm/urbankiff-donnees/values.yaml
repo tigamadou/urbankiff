@@ -19,7 +19,7 @@ wasabi:
   prefixeBase: ""
 
 reseau:
-  namespacePlateforme: plateforme
+  namespaceOperateur: cnpg-system
   cidrPod: 10.42.0.0/16
   cidrService: 10.43.0.0/16
   cidrExclus:

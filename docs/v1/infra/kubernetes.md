@@ -54,8 +54,8 @@ Deployments et StatefulSets de la preprod, A2) et `app.kubernetes.io/component`.
 | `restauration` | Job de restauration |
 
 Les NetworkPolicies ne s'appuient que sur ces libellés (`podSelector`, même namespace). Les seules `namespaceSelector`
-visent `kube-system` (Traefik, CoreDNS) et le namespace de la plateforme (`reseau.namespacePlateforme`, défaut
-`plateforme`, opérateur CloudNativePG).
+visent `kube-system` (Traefik, CoreDNS) et le namespace de la plateforme (`reseau.namespaceOperateur`, défaut
+`cnpg-system`, opérateur CloudNativePG et plugin Barman Cloud).
 
 ## NetworkPolicies
 
@@ -70,7 +70,7 @@ sortie.
 | --- | --- | --- | --- | --- |
 | `default-deny` | donnees | tous | tout refusé (entrée et sortie) | — |
 | `autoriser-dns` | donnees | tous | → CoreDNS (`kube-system`) | 53 UDP et TCP |
-| `postgres-entree` | donnees | PostgreSQL | api, workers, migrations, restauration → PostgreSQL ; pods de l'opérateur (namespace `reseau.namespacePlateforme`) → PostgreSQL | 5432 ; 8000 |
+| `postgres-entree` | donnees | PostgreSQL | api, workers, migrations, restauration → PostgreSQL ; pods de l'opérateur (namespace `reseau.namespaceOperateur`) → PostgreSQL | 5432 ; 8000 |
 | `redis-entree` | donnees | Redis | api, workers, migrations → Redis | 6379 |
 | `rustfs-entree` | donnees | RustFS | api, workers, migrations, rustfs-bucket, sauvegarde-fichiers, restauration → RustFS | 9000 |
 | `postgres-sortie` | donnees | PostgreSQL | → Wasabi (Internet hors `cidrExclus`) ; → API Kubernetes (hors plages pod et service) | 443 ; 6443 |
@@ -99,13 +99,16 @@ Points à connaître :
   refuse toute valeur qui n'est pas en `/32` (jamais `0.0.0.0/0`). La règle n'a pas de `except` : une seule IP, et un
   `except` hors du `cidr` serait refusé par Kubernetes. Les cibles `make helm-*` utilisent `NOEUD_CIDR` (défaut
   `192.0.2.10/32`, adresse de documentation).
-- L'entrée de l'opérateur CloudNativePG combine `namespaceSelector` (`reseau.namespacePlateforme`) et `podSelector`
+- L'entrée de l'opérateur CloudNativePG combine `namespaceSelector` (`reseau.namespaceOperateur`) et `podSelector`
   `app.kubernetes.io/name: cloudnative-pg` (étiquette des pods `cnpg-controller-manager`, vérifiée dans le manifeste
   vendu du lot ansible), sur le seul port 8000 (API de statut de l'instance). Le port 5432 n'est pas ouvert à
   l'opérateur. Le plugin Barman Cloud (étiquette `app: barman-cloud`) n'initie aucune connexion vers les pods
   PostgreSQL : son conteneur auxiliaire tourne dans le pod et la sortie vers Wasabi est déjà portée par `postgres-sortie`.
-  Le namespace où tourne l'opérateur (`plateforme` selon la spec § 5.1, `cnpg-system` dans les manifestes du lot ansible)
-  reste à arbitrer : il se règle par `reseau.namespacePlateforme`.
+  L'opérateur et le plugin tournent dans `cnpg-system` (spec § 3 et § 5.1 amendée) ; `plateforme` ne garde que
+  cert-manager, l'émetteur et les quotas. Le plugin est joint par l'opérateur sur le port 9090 du Service
+  `barman-cloud` (même namespace, hors NetworkPolicy du chart) ; les pods PostgreSQL ne le joignent pas (le conteneur
+  auxiliaire est local au pod), donc aucune règle vers `app: barman-cloud` n'est ouverte. À confirmer au premier
+  déploiement : si les sauvegardes échouent, ajouter une sortie 9090 de PostgreSQL vers ce podSelector.
 
 ## Ressources et quota
 

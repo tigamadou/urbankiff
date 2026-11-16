@@ -8,7 +8,7 @@ SECRETS_INVENTAIRE = '/charts/tests-transverses/secrets-inventaire.txt'
 QUOTA_PREPROD_MI = 2048
 CIDR_POD = '10.42.0.0/16'
 CIDR_SERVICE = '10.43.0.0/16'
-NAMESPACES_AUTORISES = %w[kube-system plateforme].freeze
+NAMESPACES_AUTORISES = %w[kube-system cnpg-system].freeze
 TWILIO = %w[TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN].freeze
 
 $echecs = 0
@@ -133,7 +133,7 @@ noms_secrets = File.readlines(SECRETS_INVENTAIRE, chomp: true).reject { |l| l.st
       v << "#{p['metadata']['name']} : namespaceSelector vers #{cible.inspect}" unless NAMESPACES_AUTORISES.include?(cible)
     end
   end
-  verifie "#{env} : aucune NetworkPolicy ne vise un namespace hors kube-system et plateforme", v
+  verifie "#{env} : aucune NetworkPolicy ne vise un namespace hors kube-system et cnpg-system", v
 
   v = []
   politiques.each { |p| chaines(p) { |s| v << "#{p['metadata']['name']} : #{s}" if %w[prod preprod].include?(s) } }

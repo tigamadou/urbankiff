@@ -1,5 +1,5 @@
 {{- $env := include "urbankiff.environnement" . -}}
-{{- $ns := .Values.reseau.namespacePlateforme -}}
+{{- $ns := .Values.reseau.namespaceOperateur -}}
 {{- $noeud := required "reseau.apiKubernetes.cidr est obligatoire : IP du noeud en /32" .Values.reseau.apiKubernetes.cidr -}}
 {{- if not (hasSuffix "/32" $noeud) -}}
 {{- fail (printf "reseau.apiKubernetes.cidr doit etre une IP en /32 (recu %s)" $noeud) -}}
