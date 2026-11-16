@@ -94,3 +94,34 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"public.a|absente|1"* ]]
 }
+
+@test "conclure_comparaison : décomptes égaux" {
+  printf 'public.a|1\n' > "$BATS_TEST_TMPDIR/s"
+  cp "$BATS_TEST_TMPDIR/s" "$BATS_TEST_TMPDIR/c"
+  run conclure_comparaison "$BATS_TEST_TMPDIR/s" "$BATS_TEST_TMPDIR/c"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Restauration répétée : décomptes égaux" ]
+}
+
+@test "conclure_comparaison : liste des tables en écart, code non nul" {
+  printf 'public.a|1\npublic.b|2\n' > "$BATS_TEST_TMPDIR/s"
+  printf 'public.a|1\npublic.b|0\n' > "$BATS_TEST_TMPDIR/c"
+  run conclure_comparaison "$BATS_TEST_TMPDIR/s" "$BATS_TEST_TMPDIR/c"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"- public.b (source 2, restauré 0)"* ]]
+}
+
+@test "conclure_comparaison : source sans table" {
+  : > "$BATS_TEST_TMPDIR/s"
+  run conclure_comparaison "$BATS_TEST_TMPDIR/s" "$BATS_TEST_TMPDIR/s"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"aucune table"* ]]
+}
+
+@test "tableau_comparaison : marque les écarts" {
+  printf 'public.a|1\npublic.b|2\n' > "$BATS_TEST_TMPDIR/s"
+  printf 'public.a|1\npublic.b|0\n' > "$BATS_TEST_TMPDIR/c"
+  run tableau_comparaison "$BATS_TEST_TMPDIR/s" "$BATS_TEST_TMPDIR/c"
+  [[ "$output" == *"| public.a | 1 | 1 | oui |"* ]]
+  [[ "$output" == *"| public.b | 2 | 0 | NON |"* ]]
+}

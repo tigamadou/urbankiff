@@ -189,3 +189,30 @@ analyser_bucket() {
   COPYFILE_DISABLE=1 tar -C "$1" -cf - . | docker run --rm -i --network none --label "$REST_LABEL" "$IMAGE_OUTILS" \
     sh -c "$(printf 'set -e\nmkdir /b\ntar -xf - -C /b\n'; cat "$RESTAURATION_DIR/analyser-bucket.sh")"
 }
+
+# tableau_comparaison <source> <cible> : tableau Markdown table | source | restauré | égal.
+tableau_comparaison() {
+  awk -F'|' '
+    FILENAME == ARGV[1] { s[$1] = $2; next }
+    { c[$1] = $2 }
+    END {
+      for (t in s) print t "|" s[t] "|" ((t in c) ? c[t] : "absente") "|" (((t in c) && c[t] == s[t]) ? "oui" : "NON")
+      for (t in c) if (!(t in s)) print t "|absente|" c[t] "|NON"
+    }' "$1" "$2" | sort | tableau "Table" "Source" "Restauré" "Égal"
+}
+
+# conclure_comparaison <source> <cible> : message final ; retourne 1 s'il y a un écart ou si la source est vide.
+conclure_comparaison() {
+  local ecarts
+  if [ ! -s "$1" ]; then
+    echo "Restauration répétée : aucune table dans le schéma public de la source"
+    return 1
+  fi
+  if ecarts=$(comparer_decomptes "$1" "$2"); then
+    echo "Restauration répétée : décomptes égaux"
+    return 0
+  fi
+  echo "Restauration répétée : écarts sur les tables suivantes"
+  printf '%s\n' "$ecarts" | awk -F'|' '{ print "- " $1 " (source " $2 ", restauré " $3 ")" }'
+  return 1
+}
