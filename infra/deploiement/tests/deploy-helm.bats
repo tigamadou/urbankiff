@@ -48,11 +48,12 @@ numero() { grep -n -m1 -- "$1" "$FAKE_LOG" | cut -d: -f1; }
   [[ "$ligne_donnees" != *"--atomic"* ]]
   [[ "$ligne_donnees" == *"-n preprod"* ]]
   [[ "$ligne_donnees" == *"values-preprod.yaml"* ]]
+  [[ "$ligne_donnees" == *"--set wasabi.region=eu-central-1,wasabi.bucket=urbankiff-preprod"* ]]
   ligne_app="$(grep '^helm upgrade --install urbankiff ' "$FAKE_LOG")"
   [[ "$ligne_app" == *"--atomic --wait --timeout 10m"* ]]
   [[ "$ligne_app" == *"--set image.etiquette=1.2.3"* ]]
   [[ "$ligne_app" == *"--set environnement=preprod"* ]]
-  [[ "$ligne_app" == *"--set wasabi.region=eu-central-1,wasabi.bucket=urbankiff-preprod"* ]]
+  [[ "$ligne_app" != *"wasabi"* ]]
   [[ "$ligne_app" =~ --set\ secretsChecksum=[0-9a-f]{16}\  ]]
   [[ "$ligne_app" == *"values-preprod.yaml"* ]]
 }
