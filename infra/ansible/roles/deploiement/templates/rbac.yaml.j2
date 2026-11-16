@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deploy
+  namespace: {{ item.value.namespace }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: deploy-token
+  namespace: {{ item.value.namespace }}
+  annotations:
+    kubernetes.io/service-account.name: deploy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deploy
+  namespace: {{ item.value.namespace }}
+rules:
+{{ deploiement_role_regles | to_nice_yaml(indent=2) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deploy
+  namespace: {{ item.value.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: deploy
+subjects:
+  - kind: ServiceAccount
+    name: deploy
+    namespace: {{ item.value.namespace }}

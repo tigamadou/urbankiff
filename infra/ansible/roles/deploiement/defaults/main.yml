@@ -1,0 +1,41 @@
+---
+deploiement_k8s: true
+deploiement_script_requis: true
+# Fourni par le lot deploiement ; le rôle le copie sans le modifier
+deploiement_script_source: "{{ role_path }}/../../../deploiement/urbankiff-deploy.sh"
+deploiement_utilisateur: deploy
+deploiement_dossier_config: /etc/urbankiff
+deploiement_script_cible: /usr/local/bin/urbankiff-deploy
+
+# Règles du Role de chaque namespace : ce dont helm (releases stockées en Secrets), les deux charts et
+# preprod-arret / preprod-demarrage ont besoin, et rien de plus (ni resourcequotas, ni namespaces, ni ClusterRole).
+deploiement_verbes_ecriture: [get, list, watch, create, update, patch, delete]
+deploiement_verbes_lecture: [get, list, watch]
+deploiement_role_regles:
+  - apiGroups: [""]
+    resources: [secrets, configmaps, services, serviceaccounts, persistentvolumeclaims]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [""]
+    resources: [pods, pods/log]
+    verbs: "{{ deploiement_verbes_lecture }}"
+  - apiGroups: [apps]
+    resources: [deployments, deployments/scale, statefulsets, statefulsets/scale]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [roles, rolebindings]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [clusters, backups, scheduledbackups]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [barmancloud.cnpg.io]
+    resources: [objectstores]
+    verbs: "{{ deploiement_verbes_ecriture }}"
+  - apiGroups: [cert-manager.io]
+    resources: [certificates]
+    verbs: "{{ deploiement_verbes_lecture }}"

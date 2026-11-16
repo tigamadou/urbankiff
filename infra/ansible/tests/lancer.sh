@@ -68,6 +68,15 @@ ansible -e ansible_user=testadmin tests/site-test.yml > "$travail/passage2.log" 
 cat "$travail/passage2.log"
 grep -Eq "changed=0 +unreachable=0 +failed=0" "$travail/passage2.log" || { echo "Le second passage a changé quelque chose" >&2; exit 1; }
 
+echo "== Script de déploiement requis mais absent : échec attendu"
+if ansible -e ansible_user=testadmin -e deploiement_script_requis=true -e deploiement_script_source=/nonexistent/urbankiff-deploy.sh \
+    --tags script_deploiement tests/site-test.yml > "$travail/script.log" 2>&1 || ! grep -q "lot deploiement non fusionné" "$travail/script.log"; then
+    cat "$travail/script.log"
+    echo "Le rôle aurait dû échouer avec le message du lot deploiement non fusionné" >&2
+    exit 1
+fi
+echo "ok   échec franc quand le script manque"
+
 echo "== Vérifications"
 ansible -e ansible_user=testadmin tests/verifier.yml
 echo "Tous les contrôles passent."

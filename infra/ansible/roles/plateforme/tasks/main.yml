@@ -18,11 +18,11 @@
   args:
     stdin: "{{ lookup('ansible.builtin.template', 'clusterissuer.yaml.j2') }}"
   register: plateforme_issuer
-  changed_when: "'unchanged' not in plateforme_issuer.stdout"
+  changed_when: plateforme_issuer.stdout_lines | reject('search', 'unchanged') | list | length > 0
 
 - name: Namespaces, quota de preprod et limites par défaut
   ansible.builtin.command: k3s kubectl apply -f -
   args:
     stdin: "{{ lookup('ansible.builtin.template', 'espaces.yaml.j2') }}"
   register: plateforme_espaces
-  changed_when: "'unchanged' not in plateforme_espaces.stdout"
+  changed_when: plateforme_espaces.stdout_lines | reject('search', 'unchanged') | list | length > 0
