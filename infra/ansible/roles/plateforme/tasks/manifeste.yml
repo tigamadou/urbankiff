@@ -10,13 +10,16 @@
 - name: Différence avec le cluster
   ansible.builtin.command: "k3s kubectl diff --server-side -f {{ plateforme_dossier_manifestes }}/{{ item.fichier }}"
   register: plateforme_diff
-  # 0 : identique, 1 : différences ou ressources absentes, autre : échec
+  # 0 : identique, 1 : différences ou ressources absentes, autre : échec, sauf namespace du manifeste encore absent
+  # (première installation : le diff côté serveur ne crée pas le namespace avant d'évaluer les ressources qu'il contient)
   changed_when: false
-  failed_when: plateforme_diff.rc not in [0, 1]
+  failed_when: >-
+    plateforme_diff.rc not in [0, 1]
+    and not (plateforme_diff.stderr is search('namespaces \"[^\"]+\" not found'))
 
 - name: Application du manifeste
   ansible.builtin.command: "k3s kubectl apply --server-side -f {{ plateforme_dossier_manifestes }}/{{ item.fichier }}"
-  when: plateforme_diff.rc == 1
+  when: plateforme_diff.rc != 0
   changed_when: true
 
 - name: Opérateur prêt
