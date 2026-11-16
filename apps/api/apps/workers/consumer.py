@@ -13,7 +13,7 @@ import django
 django.setup()
 
 from .models import Task  # noqa: E402
-from .settings import SLEEP, KEEP  # noqa: E402
+from .settings import SLEEP, KEEP, pool_processes  # noqa: E402
 
 
 log = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ def handle_callback(result):
 
 def run_forever():
     try:
-        with get_context("spawn").Pool(initializer=init_pool, maxtasksperchild=1) as pool:
+        with get_context("spawn").Pool(processes=pool_processes(), initializer=init_pool, maxtasksperchild=1) as pool:
             log.info('waiting for tasks...')
             while True:
                 with transaction.atomic():

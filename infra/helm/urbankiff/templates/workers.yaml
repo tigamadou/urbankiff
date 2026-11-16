@@ -29,6 +29,8 @@ spec:
             {{- include "urbankiff.envFrom" . | nindent 12 }}
           env:
             {{- include "urbankiff.envApp" . | nindent 12 }}
+            - name: WORKERS_PROCESSES
+              value: {{ .Values.workers.processus | quote }}
           # le processus des workers est le PID 1 du conteneur : sans port, seule sa présence se vérifie
           readinessProbe:
             exec:
