@@ -30,3 +30,6 @@ infra-test-assert: infra-image ## Vérifie que site.yml refuse les inventaires i
 
 infra-test: infra-image ## Joue base et le volet utilisateur de deploiement sur un conteneur Ubuntu 24.04 jetable
 	IMAGE_ANSIBLE=$(ANSIBLE_IMAGE) sh $(ANSIBLE_DIR)/tests/lancer.sh
+
+infra-vendre: ## Télécharge les manifestes officiels aux versions de group_vars/all.yml (relire le diff ensuite)
+	docker run --rm -v "$(CURDIR)/$(ANSIBLE_DIR)":/ansible -w /ansible alpine:3.20 sh -c 'apk add -q --no-cache curl >/dev/null && sh scripts/vendre-manifestes.sh'

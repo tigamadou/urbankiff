@@ -38,7 +38,7 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 6
+Statut : 🟡 en cours · Prochaine tâche : 7
 
 - [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
   - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
@@ -59,9 +59,9 @@ Statut : 🟡 en cours · Prochaine tâche : 6
   - [x] Configuration `config.yaml` (secrets-encryption, wireguard-native), installation épinglée et vérifiée
   - [x] Jeton lu sur le serveur, agent ; Helm
   - [x] `infra-lint` vert (k3s réel non testé localement)
-- [ ] **Tâche 6** Manifestes vendus et rôle `plateforme` · `feature/k3s-ansible-ansible`
-  - [ ] `make infra-vendre` : téléchargement en conteneur, sommes SHA-256, contrôle `infra-lint`
-  - [ ] Rôle : application différentielle, attentes, ClusterIssuer
+- [x] **Tâche 6** Manifestes vendus et rôle `plateforme` · `feature/k3s-ansible-ansible`
+  - [x] `make infra-vendre` : téléchargement en conteneur, sommes SHA-256, contrôle `infra-lint`
+  - [x] Rôle : application différentielle, attentes, ClusterIssuer
 - [ ] **Tâche 7** Rôle `deploiement` · `feature/k3s-ansible-ansible`
   - [ ] Volet utilisateur (compte, `deploy.env`, script, `authorized_keys`) testé sur conteneur
   - [ ] Volet Kubernetes (namespaces, ServiceAccount, Role, kubeconfig par environnement), non testé localement

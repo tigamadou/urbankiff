@@ -1,0 +1,9 @@
+---
+plateforme_dossier_manifestes: /var/lib/urbankiff/manifests
+plateforme_attente: 300s
+plateforme_limitrange_memoire_defaut: 256Mi
+plateforme_limitrange_memoire_requete: 128Mi
+plateforme_manifestes:
+  - { fichier: "cert-manager-{{ cert_manager_version }}.yaml", espace: cert-manager, deployment: "" }
+  - { fichier: "cloudnative-pg-{{ cnpg_version }}.yaml", espace: cnpg-system, deployment: cnpg-controller-manager }
+  - { fichier: "plugin-barman-cloud-{{ barman_plugin_version }}.yaml", espace: cnpg-system, deployment: barman-cloud }

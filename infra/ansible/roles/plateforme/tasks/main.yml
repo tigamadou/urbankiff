@@ -1,3 +1,28 @@
 ---
-# Rôle rempli par une tâche suivante du plan
-[]
+- name: Dossier des manifestes sur le serveur
+  ansible.builtin.file:
+    path: "{{ plateforme_dossier_manifestes }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Manifestes vendus (cert-manager, CloudNativePG, plugin Barman Cloud)
+  ansible.builtin.include_tasks: manifeste.yml
+  loop: "{{ plateforme_manifestes }}"
+  loop_control:
+    label: "{{ item.fichier }}"
+
+- name: Émetteur Let's Encrypt (challenge HTTP via Traefik)
+  ansible.builtin.command: k3s kubectl apply -f -
+  args:
+    stdin: "{{ lookup('ansible.builtin.template', 'clusterissuer.yaml.j2') }}"
+  register: plateforme_issuer
+  changed_when: "'unchanged' not in plateforme_issuer.stdout"
+
+- name: Namespaces, quota de preprod et limites par défaut
+  ansible.builtin.command: k3s kubectl apply -f -
+  args:
+    stdin: "{{ lookup('ansible.builtin.template', 'espaces.yaml.j2') }}"
+  register: plateforme_espaces
+  changed_when: "'unchanged' not in plateforme_espaces.stdout"
