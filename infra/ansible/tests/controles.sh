@@ -11,9 +11,12 @@ if [ -f "$gabarit" ]; then
     verifier "$gabarit" '^secrets-encryption: true$'
     verifier "$gabarit" '^flannel-backend: wireguard-native$'
     verifier "$gabarit" '^write-kubeconfig-mode: "0600"$'
+    verifier "$gabarit" '^  - nodeport-addresses=127.0.0.0/8$'
 else
     echo "ECHEC $gabarit absent"; echec=1
 fi
+grep -q -- '^  - nodeport-addresses=127.0.0.0/8$' roles/k3s/templates/config-agent.yaml.j2 \
+    || { echo "ECHEC config-agent.yaml.j2 : nodeport-addresses absent"; echec=1; }
 
 # Manifestes vendus : versions de group_vars/all.yml et sommes SHA-256
 version() { sed -n "s/^$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *\$/\1/p" group_vars/all.yml; }

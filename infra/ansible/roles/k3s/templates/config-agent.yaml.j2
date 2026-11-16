@@ -2,3 +2,6 @@
 server: https://{{ hostvars[groups['serveur'][0]].ansible_host }}:6443
 token: {{ k3s_jeton }}
 node-external-ip: {{ ansible_host }}
+# NodePorts limités à la boucle locale, comme sur le serveur (kube-proxy passe avant ufw).
+kube-proxy-arg:
+  - nodeport-addresses=127.0.0.0/8

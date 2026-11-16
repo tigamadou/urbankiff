@@ -83,6 +83,9 @@ Pour prévisualiser : `make infra-ansible LIMITE=noeuds ARGS="--check --diff"`.
 ## Vérifications
 
 - Ports vus de l'extérieur : `make ports-scan HOTE=<IP-de-A>` doit répondre 22, 80 et 443 seulement.
+  kube-proxy publie les NodePorts (ceux du `LoadBalancer` de Traefik compris) avant les règles ufw : la configuration
+  k3s les limite à la boucle locale (`kube-proxy-arg: nodeport-addresses=127.0.0.0/8`), sinon ils apparaissent au scan
+  (constaté au premier passage réel : 30376 et 32691, Traefik).
 - Mot de passe refusé : `ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no <admin>@<IP-de-A>`.
 - Nœud prêt : `ssh <admin>@<IP-de-A> sudo k3s kubectl get nodes`.
 - Droits du compte `deploy`, sur le serveur, `sudo -u deploy` :
