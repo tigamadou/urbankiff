@@ -31,20 +31,20 @@ cohérentes entre elles (test bats `inventaire.bats`).
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 2
+Statut : ⬜ à faire · Prochaine tâche : 5
 
 - [x] **Tâche 1** Retirer imgproxy partout · `feature/k3s-ansible-nettoyage`
   - [x] Compose, `devteam.agent.conf`, `.claude/devteam.projet.md`, `.env.template`
   - [x] `IMGPROXY_SETUP.md`, `generate_imgproxy_url.py`, `useSignedUrl.js`
   - [x] Listes de secrets et inventaire (`IMGPROXY_KEY`, `IMGPROXY_SALT`)
-- [ ] **Tâche 2** Retirer l'ancien déploiement et réécrire le README
-  - [ ] `deploys/`, `caddyprod/`, Compose de prod, `apps/backup_service/`, `apps/minio/`
-  - [ ] `README.md`
-- [ ] **Tâche 3** Retirer le code de stockage obsolète (`BUCKETEER_AWS_*`, `REACT_APP_MINIO_*`)
-- [ ] **Tâche 4** Contrat « Secrets » : Wasabi, déploiement, `REDIS_ENDPOINT`
+- [x] **Tâche 2** Retirer l'ancien déploiement et réécrire le README
+  - [x] `deploys/`, `caddyprod/`, Compose de prod, `apps/backup_service/`, `apps/minio/`
+  - [x] `README.md`
+- [x] **Tâche 3** Retirer le code de stockage obsolète (`BUCKETEER_AWS_*`, `REACT_APP_MINIO_*`)
+- [x] **Tâche 4** Contrat « Secrets » : Wasabi, déploiement, `REDIS_ENDPOINT`
 - [ ] **Tâche 5** Vérification du lot
 
-> Reprise : (vide)
+> Reprise : tâche 4 faite avec WASABI_REGION et WASABI_BUCKET vides (valeurs à fournir par le développeur). Tâche 5 en cours.
 
 Statuts : ⬜ à faire · 🟡 en cours · ✅ terminé. Cocher une case **seulement après tests verts**. Interruption en cours
 de tâche : cocher ce qui est fini et noter ici `> Reprise :` l'étape en cours, les fichiers touchés et la prochaine
