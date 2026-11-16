@@ -1,7 +1,70 @@
 ---
-- name: Nœuds k3s
+# Prépare les nœuds k3s de zéro, de façon rejouable : make infra-ansible LIMITE=noeuds
+- name: Contrôle des variables, système de base et k3s
   hosts: noeuds
+  become: true
   gather_facts: false
-  tasks:
-    - name: Rien à faire pour l'instant
-      ansible.builtin.meta: noop
+  pre_tasks:
+    - name: Administrateurs déclarés, sans adresse e-mail dans les clés
+      ansible.builtin.assert:
+        that:
+          - admin_users is defined
+          - admin_users | length > 0
+          - admin_users | map(attribute='name') | length == admin_users | map(attribute='name') | unique | length
+          - admin_users | map(attribute='pubkey') | select('match', '^ssh-') | list | length == admin_users | length
+          - admin_users | map(attribute='pubkey') | select('contains', '@') | list | length == 0
+        fail_msg: "admin_users : liste non vide, noms uniques, clés publiques commençant par ssh- et sans adresse e-mail (@)"
+        quiet: true
+      tags: [assertions]
+
+    - name: Compte de connexion autorisé
+      ansible.builtin.assert:
+        that:
+          - ansible_user in (['root'] + (admin_users | map(attribute='name') | list))
+        fail_msg: "ansible_user doit être root (premier passage) ou un compte de admin_users"
+        quiet: true
+      tags: [assertions]
+
+    - name: Adresse Let's Encrypt renseignée
+      ansible.builtin.assert:
+        that:
+          - letsencrypt_email is defined
+          - letsencrypt_email is match('^[^@ ]+@[^@ ]+$')
+        fail_msg: "letsencrypt_email doit être une adresse e-mail, à définir dans inventory.yml uniquement"
+        quiet: true
+      tags: [assertions]
+
+    - name: Clés de déploiement distinctes par environnement
+      ansible.builtin.assert:
+        that:
+          - deploy_keys is defined
+          - deploy_keys.prod is defined
+          - deploy_keys.preprod is defined
+          - deploy_keys.prod is match('^ssh-')
+          - deploy_keys.preprod is match('^ssh-')
+          - "'@' not in deploy_keys.prod"
+          - "'@' not in deploy_keys.preprod"
+          - deploy_keys.prod != deploy_keys.preprod
+        fail_msg: "deploy_keys.prod et deploy_keys.preprod : clés ssh- distinctes, sans adresse e-mail"
+        quiet: true
+      tags: [assertions]
+
+    - name: Un seul nœud serveur, les autres nœuds sont des agents
+      ansible.builtin.assert:
+        that:
+          - groups['serveur'] | default([]) | length == 1
+          - groups['noeuds'] | sort == ((groups['serveur'] | default([])) + (groups['agents'] | default([]))) | sort
+        fail_msg: "Exactement un hôte dans le groupe serveur ; chaque hôte de noeuds est dans serveur ou agents"
+        quiet: true
+      run_once: true
+      tags: [assertions]
+  roles:
+    - base
+    - k3s
+
+- name: Plateforme et déploiement (nœud serveur)
+  hosts: serveur
+  become: true
+  roles:
+    - plateforme
+    - deploiement

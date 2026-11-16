@@ -1,0 +1,22 @@
+all:
+  vars:
+    ansible_connection: local
+    ansible_user: root
+  children:
+    noeuds:
+      vars:
+        admin_users:
+          - name: admin
+            pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE"
+        letsencrypt_email: "test@example.invalid"
+        deploy_keys:
+          preprod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPREPRODFAKEPREPRODFAKEPREPRODFAKEPREPROD"
+          prod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPR"
+      hosts:
+        orphelin: {}
+      children:
+        serveur:
+          hosts:
+            a: {}
+        agents:
+          hosts: {}
