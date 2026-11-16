@@ -1,5 +1,9 @@
+import importlib
+import os
+from unittest.mock import patch
+
 from django.db import connection
-from django.test import TestCase, TransactionTestCase
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 
 
 class HealthTests(TestCase):
@@ -32,3 +36,26 @@ class HealthDatabaseDownTests(TransactionTestCase):
 
         recovered = self.client.get('/api/health/')
         self.assertEqual(recovered.status_code, 200)
+
+
+class GunicornConfigTests(SimpleTestCase):
+    def load(self):
+        import project.gunicorn as config
+        return importlib.reload(config)
+
+    def test_defaults(self):
+        with patch.dict(os.environ):
+            os.environ.pop('WEB_CONCURRENCY', None)
+            config = self.load()
+        self.assertEqual(config.bind, '0.0.0.0:8000')
+        self.assertEqual(config.workers, 2)
+        self.assertEqual(config.worker_tmp_dir, '/tmp')
+        self.assertEqual(config.accesslog, '-')
+        self.assertEqual(config.errorlog, '-')
+        self.assertGreaterEqual(config.timeout, 30)
+        self.assertLessEqual(config.graceful_timeout, 30)
+
+    def test_workers_from_environment(self):
+        with patch.dict(os.environ, {'WEB_CONCURRENCY': '3'}):
+            config = self.load()
+        self.assertEqual(config.workers, 3)

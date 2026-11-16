@@ -33,16 +33,16 @@ la mission `k3s-ansible`, lot 3 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ⬜ à faire · Prochaine tâche : 3
 
-- [ ] **Tâche 1** Point de santé `/api/health/` · `feature/k3s-ansible-api-prod`
-  - [ ] Tests (200 avec la vraie base de test, 405, public, 503 base injoignable) écrits et vus en échec
-  - [ ] Vue `health` et route
-  - [ ] Tests verts
-- [ ] **Tâche 2** Configuration gunicorn
-  - [ ] Tests du module `project.gunicorn` écrits et vus en échec
-  - [ ] `project/gunicorn.py`
-  - [ ] Tests verts
+- [x] **Tâche 1** Point de santé `/api/health/` · `feature/k3s-ansible-api-prod`
+  - [x] Tests (200 avec la vraie base de test, 405, public, 503 base injoignable) écrits et vus en échec
+  - [x] Vue `health` et route
+  - [x] Tests verts
+- [x] **Tâche 2** Configuration gunicorn
+  - [x] Tests du module `project.gunicorn` écrits et vus en échec
+  - [x] `project/gunicorn.py`
+  - [x] Tests verts
 - [ ] **Tâche 3** Dockerfile multi-étapes et `.dockerignore`
   - [ ] Construction des deux cibles
   - [ ] Étape `prod` : non root, `/tmp` seul en écriture
