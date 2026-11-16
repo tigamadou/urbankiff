@@ -1,5 +1,5 @@
 # Configuration gitleaks (make secrets-scan) : règles par défaut, plus les règles propres au projet ci-dessous.
-# Aucune exception : les valeurs de développement local versionnées ne sont pas détectées par ces règles.
+# Seule exception : le manifeste vendu ci-dessous. les valeurs de développement local versionnées ne sont pas détectées par ces règles.
 [extend]
 useDefault = true
 
@@ -14,3 +14,8 @@ id = "google-oauth-access-token"
 description = "Jeton d accès OAuth Google (ya29.…)"
 regex = '''ya29\.[A-Za-z0-9_-]{20,}'''
 keywords = ["ya29."]
+
+# Manifeste officiel du plugin Barman vendu tel quel : faux positif kubernetes-secret-yaml (nom d'image en base64).
+[allowlist]
+description = "Manifeste vendu plugin-barman-cloud"
+paths = ['''infra/ansible/roles/plateforme/files/plugin-barman-cloud-v0\.16\.0\.yaml''']
