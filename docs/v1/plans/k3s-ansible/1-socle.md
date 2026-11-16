@@ -30,7 +30,7 @@ la mission `k3s-ansible`, lot 1 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 3
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Inclusion générique des `make/*.mk` dans le `Makefile` · `feature/k3s-ansible-socle`
   - [x] Test : fichier temporaire `make/essai-socle.mk`, cible invisible avant, visible après
@@ -39,7 +39,7 @@ Statut : ⬜ à faire · Prochaine tâche : 3
 - [x] **Tâche 2** Ignorer l'inventaire Ansible et les dossiers `.travail/` dans `.gitignore` · `feature/k3s-ansible-socle`
   - [x] Test `git check-ignore` rouge puis vert
   - [x] Ajouter les deux motifs
-- [ ] **Tâche 3** Vérification du lot
+- [x] **Tâche 3** Vérification du lot
 
 > Reprise : (vide)
 
