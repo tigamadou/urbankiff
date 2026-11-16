@@ -42,9 +42,9 @@ Statut : ⬜ à faire · Prochaine tâche : 5
   - [x] `README.md`
 - [x] **Tâche 3** Retirer le code de stockage obsolète (`BUCKETEER_AWS_*`, `REACT_APP_MINIO_*`)
 - [x] **Tâche 4** Contrat « Secrets » : Wasabi, déploiement, `REDIS_ENDPOINT`
-- [ ] **Tâche 5** Vérification du lot
+- [x] **Tâche 5** Vérification du lot
 
-> Reprise : tâche 4 faite avec WASABI_REGION et WASABI_BUCKET vides (valeurs à fournir par le développeur). Tâche 5 en cours.
+> Reprise : (vide)
 
 Statuts : ⬜ à faire · 🟡 en cours · ✅ terminé. Cocher une case **seulement après tests verts**. Interruption en cours
 de tâche : cocher ce qui est fini et noter ici `> Reprise :` l'étape en cours, les fichiers touchés et la prochaine
