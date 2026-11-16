@@ -1,0 +1,34 @@
+# prod ou preprod : obligatoire (voir values-prod.yaml et values-preprod.yaml)
+environnement: ""
+# empreinte des secrets, calculée par le script de déploiement : un changement redémarre les pods qui les lisent
+secretsChecksum: ""
+secretName: urbankiff-secrets
+
+image:
+  etiquette: ""
+  secretTirage: ""
+  rclone: rclone/rclone:1.68.2
+  redis: redis:7.4.1-alpine
+  rustfs: rustfs/rustfs:1.0.1
+  postgres: ghcr.io/cloudnative-pg/postgresql
+
+wasabi:
+  region: ""
+  endpoint: ""
+  bucket: ""
+  prefixeBase: ""
+
+reseau:
+  namespacePlateforme: plateforme
+  cidrPod: 10.42.0.0/16
+  cidrService: 10.43.0.0/16
+  cidrExclus:
+    - 10.42.0.0/16
+    - 10.43.0.0/16
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16
+  apiKubernetes:
+    cidr: 0.0.0.0/0
+    port: 6443

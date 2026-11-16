@@ -22,7 +22,7 @@ HELM_SET := --set image.etiquette=$(ETIQUETTE) --set wasabi.region=$(WASABI_REGI
 HELM_RUN := docker run --rm -v "$(CURDIR)/$(HELM_DIR)":/charts:ro -w /charts $(HELM_IMAGE)
 CHARTS_CHOISIS := $(if $(CHART),$(CHART),$(HELM_CHARTS))
 
-.PHONY: helm-present helm-env helm-lint helm-rendu helm-valider helm-test helm-transverses helm-paquet helm-schemas helm-garde helm-controle
+.PHONY: helm-unittest helm-present helm-env helm-lint helm-rendu helm-valider helm-test helm-transverses helm-paquet helm-schemas helm-garde helm-controle
 
 helm-present:
 	@ls -d $(HELM_DIR)/urbankiff*/Chart.yaml >/dev/null 2>&1 || { echo "helm : aucun chart sous $(HELM_DIR)/urbankiff* (Chart.yaml absent)" >&2; exit 1; }
@@ -53,8 +53,10 @@ helm-valider: helm-env helm-present ## Rendu puis kubeconform strict avec les sc
 	      -schema-location '/schemas/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' - || exit 1; \
 	done
 
-helm-test: helm-present ## Tests helm-unittest puis contrôles transverses sur le rendu des deux environnements
-	docker run --rm -v "$(CURDIR)/$(HELM_DIR)":/apps:ro $(HELM_UNITTEST_IMAGE) $(HELM_CHARTS)
+helm-unittest: helm-present ## Tests helm-unittest seuls (CHART= facultatif) ; copie dans le conteneur car le plugin écrit ses instantanés
+	docker run --rm -v "$(CURDIR)/$(HELM_DIR)":/src:ro --entrypoint sh $(HELM_UNITTEST_IMAGE) -c 'mkdir -p /tmp/apps && cp -r /src/. /tmp/apps/ && cd /tmp/apps && helm unittest $(CHARTS_CHOISIS)'
+
+helm-test: helm-unittest ## Tests helm-unittest puis contrôles transverses sur le rendu des deux environnements
 	@$(MAKE) --no-print-directory helm-transverses
 
 helm-transverses: helm-present

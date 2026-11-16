@@ -1,0 +1,5 @@
+environnement: preprod
+secretsChecksum: test
+wasabi:
+  region: eu-central-2
+  bucket: urbankiff-test

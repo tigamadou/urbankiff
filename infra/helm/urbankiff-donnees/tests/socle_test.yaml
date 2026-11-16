@@ -1,0 +1,65 @@
+suite: socle
+templates:
+  - templates/reseau-defaut.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: refuse un environnement inconnu
+    set:
+      environnement: dev
+    asserts:
+      - failedTemplate:
+          errorPattern: "prod ou preprod"
+  - it: refuse un environnement vide
+    set:
+      environnement: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "prod ou preprod"
+  - it: refus par défaut en entrée et en sortie pour tous les pods
+    documentSelector:
+      path: metadata.name
+      value: default-deny
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.podSelector
+          value: {}
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress, Egress]
+      - notExists:
+          path: spec.ingress
+      - notExists:
+          path: spec.egress
+  - it: ouvre seulement le DNS de kube-system pour tous les pods
+    documentSelector:
+      path: metadata.name
+      value: autoriser-dns
+    asserts:
+      - equal:
+          path: spec.podSelector
+          value: {}
+      - equal:
+          path: spec.policyTypes
+          value: [Egress]
+      - equal:
+          path: spec.egress
+          value:
+            - to:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      k8s-app: kube-dns
+              ports:
+                - port: 53
+                  protocol: UDP
+                - port: 53
+                  protocol: TCP
+  - it: ne rend ni namespace ni quota (créés par le rôle plateforme)
+    asserts:
+      - hasDocuments:
+          count: 2
