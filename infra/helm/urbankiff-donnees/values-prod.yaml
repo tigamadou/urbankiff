@@ -1,0 +1,22 @@
+environnement: prod
+
+postgres:
+  ressources:
+    requests:
+      memory: 384Mi
+    limits:
+      memory: 768Mi
+
+redis:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+rustfs:
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi

@@ -5,7 +5,7 @@
 HELM_IMAGE := alpine/helm:3.16.4
 HELM_UNITTEST_IMAGE := helmunittest/helm-unittest:3.16.4-0.7.1
 KUBECONFORM_IMAGE := ghcr.io/yannh/kubeconform:v0.6.7
-YQ_IMAGE := mikefarah/yq:4.44.6
+RUBY_IMAGE := ruby:3.3.6-alpine
 KUBERNETES_VERSION := 1.31.0
 SCHEMAS_SOURCE := https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
 SCHEMAS_LISTE := postgresql.cnpg.io/cluster_v1 postgresql.cnpg.io/scheduledbackup_v1 barmancloud.cnpg.io/objectstore_v1 cert-manager.io/certificate_v1
@@ -30,12 +30,11 @@ helm-present:
 helm-env:
 	@case "$(ENV)" in prod|preprod) ;; *) echo "Usage : make $(MAKECMDGOALS) ENV=<prod|preprod> [CHART=<urbankiff-donnees|urbankiff>]" >&2; exit 2;; esac
 
-helm-lint: helm-present ## Lint des deux charts (valeurs par défaut, prod, preprod)
+helm-lint: helm-present ## Lint des deux charts avec les valeurs prod et preprod (les valeurs par défaut n'ont pas d'environnement)
 	@for c in $(HELM_CHARTS); do \
-	  for v in "" prod preprod; do \
-	    f=""; [ -z "$$v" ] || f="-f $$c/values-$$v.yaml"; \
-	    echo "== lint $$c $${v:-défaut}"; \
-	    $(HELM_RUN) lint $$c $$f $(HELM_SET) --strict || exit 1; \
+	  for v in prod preprod; do \
+	    echo "== lint $$c $$v"; \
+	    $(HELM_RUN) lint $$c -f $$c/values-$$v.yaml $(HELM_SET) --strict || exit 1; \
 	  done; \
 	done
 
@@ -64,7 +63,7 @@ helm-transverses: helm-present
 	@for e in prod preprod; do for c in $(HELM_CHARTS); do \
 	  $(HELM_RUN) template $$c $$c -n $$e -f $$c/values-$$e.yaml $(HELM_SET) > $(HELM_SORTIE)/$$c-$$e.yaml || exit 1; \
 	done; done
-	docker run --rm -v "$(CURDIR)/$(HELM_DIR)/tests-transverses":/controle:ro -v "$(CURDIR)/$(HELM_DIR)":/charts:ro -v "$(CURDIR)/$(HELM_SORTIE)":/rendu:ro --entrypoint sh $(YQ_IMAGE) /controle/controle.sh
+	docker run --rm -v "$(CURDIR)/$(HELM_DIR)/tests-transverses":/controle:ro -v "$(CURDIR)/$(HELM_DIR)":/charts:ro -v "$(CURDIR)/$(HELM_SORTIE)":/rendu:ro $(RUBY_IMAGE) ruby /controle/controle.rb
 
 helm-paquet: helm-present ## Empaquette les charts dans .superpowers/helm-paquets (VERSION=x.y.z)
 	@test -n "$(VERSION)" || { echo "Usage : make helm-paquet VERSION=<x.y.z>" >&2; exit 2; }
