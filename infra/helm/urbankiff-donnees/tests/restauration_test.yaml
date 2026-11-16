@@ -1,0 +1,112 @@
+suite: restauration
+templates:
+  - templates/restauration-job.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: absent par défaut
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: échoue si active sans préfixe
+    set:
+      restauration.active: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: Job de restauration avec pg_restore exact
+    set:
+      restauration.active: true
+      restauration.prefixe: restauration/2026-12-01/
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: urbankiff-restauration
+      - notExists:
+          path: metadata.annotations["helm.sh/hook"]
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: restauration
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: recuperer
+      - equal:
+          path: spec.template.spec.initContainers[0].args
+          value: ["copy", "wasabi:$(WASABI_BUCKET)/restauration/2026-12-01", "/restauration"]
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: pg-restore
+      - equal:
+          path: spec.template.spec.initContainers[1].image
+          value: ghcr.io/cloudnative-pg/postgresql:15
+      - equal:
+          path: spec.template.spec.initContainers[1].command
+          value: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/base.dump"]
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGHOST
+            value: urbankiff-pg-rw
+  - it: copie les fichiers vers RustFS puis purge le préfixe
+    set:
+      restauration.active: true
+      restauration.prefixe: restauration/2026-12-01/
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["sh", "-c"]
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone copy /restauration/fichiers "rustfs:\$BUCKET"'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone purge "wasabi:\$WASABI_BUCKET/restauration/2026-12-01"'
+  - it: sans copie ni purge si désactivées
+    set:
+      restauration.active: true
+      restauration.prefixe: restauration/2026-12-01/
+      restauration.copierFichiers: false
+      restauration.purger: false
+    asserts:
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone (copy|purge)'
+  - it: aucun secret en argument, tout par secretKeyRef, durcissement complet
+    set:
+      restauration.active: true
+      restauration.prefixe: restauration/2026-12-01/
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - exists:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+      - exists:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+      - exists:
+          path: spec.template.spec.containers[0].resources.limits.memory
+      - equal:
+          path: spec.backoffLimit
+          value: 0

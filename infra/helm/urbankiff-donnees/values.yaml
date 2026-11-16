@@ -86,3 +86,16 @@ outils:
       memory: 32Mi
     limits:
       memory: 128Mi
+
+sauvegardeFichiers:
+  planification: "30 3 * * *"
+
+# Job de restauration d'une sauvegarde déposée sous restauration/<date>/ du bucket Wasabi (spec § 5.10) :
+# absent par défaut, rendu seulement avec active: true
+restauration:
+  active: false
+  # chemin relatif à la racine du bucket, par exemple restauration/2026-12-01/ (obligatoire si active)
+  prefixe: ""
+  fichierDump: base.dump
+  copierFichiers: true
+  purger: true
