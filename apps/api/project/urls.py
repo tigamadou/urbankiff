@@ -6,7 +6,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from apps.post.views import PostFetchListAPIView
 
-from .views import api_root
+from .views import api_root, health
 
 admin.site.site_title = settings.ADMIN_TITLE
 admin.site.site_header = settings.ADMIN_HEADER
@@ -28,6 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # Apps
+    path('api/health/', health, name='health'),
     path('', include('apps.file.urls')),
     path('', include('apps.user.urls')),
     path('category/', include('apps.category.urls')),
