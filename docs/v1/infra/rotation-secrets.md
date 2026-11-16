@@ -93,3 +93,14 @@ Avant de lancer le script, créer chez chaque fournisseur la nouvelle valeur (sa
       anciens `env.prod`) — date :
 - [ ] Base migrée par la mission k3s : mot de passe de l'administrateur `prodseed` changé avant la remise en
       service (il valait `password`) — date :
+
+## 5. Retrait des anciennes instances (bascule k3s, spec § 5.10)
+
+- [x] A : réinstallé en Ubuntu 24.04 depuis la console Contabo (même IP) ; anciens conteneurs, volumes MinIO, Redis
+      et Caddy effacés ; nœud k3s configuré par `make infra-ansible LIMITE=noeuds` — date : 2026-11-17
+- [x] A : seuls 22, 80 et 443 ouverts vus de l'extérieur (`make ports-scan`), `root` et mot de passe SSH refusés —
+      date : 2026-11-17
+- [x] Preprod déployée sur k3s (`v0.1.0-rc.4`) : `preprod.urbankiff.com`, `preprod.api.urbankiff.com`,
+      `preprod.panel.urbankiff.com` en HTTPS (Let's Encrypt) — date : 2026-11-17
+- [ ] B : base PostgreSQL de l'ancien déploiement (arrêtée, pare-feu 22 seul) effacée à la réinstallation de B comme
+      nœud k3s, **après** la restauration de la prod depuis la sauvegarde inspectée — date :

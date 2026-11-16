@@ -36,3 +36,10 @@ développeur.
 Mise en service avec le développeur (spec § 5.10) : réinstallation de A, `make infra-ansible`, inspection de la
 sauvegarde, paquets GHCR publics, premier déploiement de la preprod. Le premier déploiement de la prod attend le chantier
 séparé Firebase et connexion Google.
+
+**Preprod en service le 2026-11-17** (`v0.1.0-rc.4`). Le premier passage réel a révélé sept défauts que les tests en
+conteneur ne pouvaient pas voir, corrigés par les PR #37 à #43 : diff des manifestes à la première installation et
+kubeconfig du rôle `deploiement` (#37), Wasabi passé au mauvais chart (#38), RustFS sans `/logs` en racine lecture
+seule (#39), lecture des `replicasets` pour `helm --wait` (#40), workers `OOMKilled` (un processus par CPU, #41), quota
+de preprod trop juste (A18, #42), NodePorts de Traefik publiés hors ufw (#43). Restent : inspection de la sauvegarde,
+données de démonstration de la preprod (non implémentées), premier déploiement de la prod.
