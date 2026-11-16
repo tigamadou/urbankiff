@@ -1,0 +1,16 @@
+---
+- name: Fermeture de la connexion SSH de root (en dernier, pour pouvoir reprendre après un échec)
+  ansible.builtin.template:
+    src: root.conf.j2
+    dest: /etc/ssh/sshd_config.d/11-urbankiff-root.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: sshd -t -f %s
+  register: fermeture_root_conf
+
+- name: Redémarrage de ssh si la fermeture vient d'être posée
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  when: fermeture_root_conf is changed

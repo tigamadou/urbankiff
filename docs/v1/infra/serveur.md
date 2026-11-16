@@ -11,8 +11,9 @@ avec la plateforme (cert-manager, CloudNativePG, plugin Barman Cloud, `ClusterIs
 | --- | --- | --- |
 | `base` | paquets, administrateurs à clé, suppression des comptes absents de `admin_users`, sshd durci, ufw, fail2ban | oui (`make infra-test`) |
 | `k3s` | k3s à version épinglée (serveur ou agent), Helm 3 | non (lint et `--syntax-check` seulement) |
-| `plateforme` | manifestes vendus (cert-manager, CloudNativePG, Barman Cloud), `ClusterIssuer`, namespaces `plateforme`, `prod` et `preprod`, quota et limites par défaut | non (lint seulement) |
+| `plateforme` | manifestes vendus : cert-manager, opérateur CloudNativePG et plugin Barman Cloud (ces deux-là dans le namespace `cnpg-system`, celui des manifestes officiels) ; `ClusterIssuer`, namespaces `plateforme`, `prod` et `preprod`, quota et limites par défaut | non (lint seulement) |
 | `deploiement` | compte `deploy` verrouillé, `authorized_keys` à commande forcée (une clé par environnement), `/etc/urbankiff/deploy.<env>.env`, script de déploiement ; ServiceAccount, Role et kubeconfig par namespace | volet utilisateur oui ; volet Kubernetes non |
+| `fermeture_root` | ferme la connexion SSH de `root`, jouée en dernier après tous les autres plays | oui (`make infra-test`) |
 
 La mise en service réelle (spec § 7) valide ce qui n'est pas testé localement : k3s, la plateforme et le volet
 Kubernetes de `deploiement` n'ont jamais tourné sur un cluster réel avant elle.
@@ -70,8 +71,10 @@ ssh-keygen -t ed25519 -N '' -C '' -f ./cle-deploy-prod
 make infra-ansible LIMITE=noeuds
 ```
 
-Le premier passage se fait en `root` (image Contabo) : il crée les administrateurs, coupe la connexion de `root`
-et active ufw. Ensuite, changer `ansible_user` dans `inventory.yml` pour le nom d'un compte de `admin_users` et
+Le premier passage se fait en `root` (image Contabo) : il crée les administrateurs et active ufw ; la connexion
+de `root` n'est coupée qu'en dernier (rôle `fermeture_root`, dernier play de `site.yml`), après la réussite de tous
+les autres plays. Un échec en cours de route laisse donc `root` utilisable : corriger puis rejouer la même commande
+sans changer `ansible_user`. Une fois le passage terminé, changer `ansible_user` dans `inventory.yml` pour le nom d'un compte de `admin_users` et
 rejouer ; un second passage ne doit rien changer (`changed=0`). Le contrôle de `site.yml` n'accepte comme
 `ansible_user` que `root` ou un compte de `admin_users`, pour qu'on ne supprime jamais le compte qui se connecte.
 
@@ -85,6 +88,8 @@ Pour prévisualiser : `make infra-ansible LIMITE=noeuds ARGS="--check --diff"`.
 - Droits du compte `deploy`, sur le serveur, `sudo -u deploy` :
   - `kubectl auth can-i --list --kubeconfig /home/deploy/.kube/preprod` ne montre que le namespace `preprod` ;
   - `kubectl auth can-i create clusterroles --kubeconfig /home/deploy/.kube/prod` répond `no`.
+  - ces deux vérifications sont à jouer à la mise en service : le volet Kubernetes de `deploiement` n'est pas testé
+    en conteneur, elles sont la seule preuve que les droits sont bien limités par namespace.
 - Le compte `deploy` n'ouvre pas de shell : `ssh deploy@<IP-de-A>` sans commande est refusé par le script de
   déploiement (commande forcée, `restrict`).
 
@@ -138,6 +143,8 @@ Le rôle n'applique jamais d'URL distante : seuls les fichiers vendus dans `role
 - `flannel-backend: wireguard-native` est fixé à l'installation : en changer exige de réinstaller le cluster.
 - k3s, la plateforme et le volet Kubernetes de `deploiement` ne sont pas testés en conteneur (pas de k3s en conteneur
   dans ce lot) ; la mise en service réelle les valide.
+- Compatibilité à vérifier à la mise en service : la version du plugin Barman Cloud doit être compatible avec celle
+  de l'opérateur CloudNativePG (voir les notes de version du plugin) ; les deux sont épinglées dans `group_vars/all.yml`.
 - Les namespaces, le quota de `preprod` (2 Gio de limites, 1,5 Gio de requêtes) et le `LimitRange` sont créés par le
   rôle `plateforme` ; le compte `deploy` ne peut pas les modifier.
 - `deploy.<env>.env` remplace le `deploy.env` unique du contrat initial (arbitrage A8 de la spec).

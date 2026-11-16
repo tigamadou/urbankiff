@@ -79,3 +79,10 @@
   roles:
     - plateforme
     - deploiement
+
+- name: Fermeture de la connexion de root, après la réussite de tous les plays précédents
+  hosts: noeuds
+  become: true
+  gather_facts: false
+  roles:
+    - fermeture_root

@@ -69,7 +69,7 @@
     force: true
   loop: "{{ base_comptes_a_supprimer }}"
 
-- name: Durcissement SSH (clé uniquement, pas de root)
+- name: Durcissement SSH (clé uniquement ; root est fermé en dernier par le rôle fermeture_root)
   ansible.builtin.template:
     src: sshd.conf.j2
     dest: /etc/ssh/sshd_config.d/10-urbankiff.conf
