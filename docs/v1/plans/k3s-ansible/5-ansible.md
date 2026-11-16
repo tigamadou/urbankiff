@@ -38,7 +38,7 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 9
+Statut : ✅ terminé · Prochaine tâche : aucune
 
 - [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
   - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
@@ -66,7 +66,7 @@ Statut : 🟡 en cours · Prochaine tâche : 9
   - [x] Volet utilisateur (compte, `deploy.env`, script, `authorized_keys`) testé sur conteneur
   - [x] Volet Kubernetes (namespaces, ServiceAccount, Role, kubeconfig par environnement), non testé localement
 - [x] **Tâche 8** Documentation `docs/v1/infra/serveur.md` · `feature/k3s-ansible-ansible`
-- [ ] **Tâche 9** Vérification du lot
+- [x] **Tâche 9** Vérification du lot
 
 > Reprise : (vide)
 
