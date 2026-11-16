@@ -25,4 +25,8 @@ done
 (cd "$files" && sha256sum -c SHA256SUMS >/dev/null) || { echo "ECHEC sommes SHA-256 des manifestes"; echec=1; }
 [ "$(ls "$files"/*.yaml | wc -l)" -eq 3 ] || { echo "ECHEC fichiers de versions anciennes dans $files"; echec=1; }
 
+# Role du compte deploy : helm --wait lit les ReplicaSets des Deployments
+grep -q 'resources: \[replicasets\]' roles/deploiement/defaults/main.yml \
+    || { echo "ECHEC roles/deploiement/defaults/main.yml : lecture des replicasets absente"; echec=1; }
+
 exit $echec
