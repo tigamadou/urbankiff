@@ -39,9 +39,9 @@ Statut : ⬜ à faire · Prochaine tâche : 1
 - [x] **Tâche 1** Image de production de Next · `feature/k3s-ansible-fronts-prod`
   - [x] `.dockerignore` et tests (construction, lecture seule, 200, grep des valeurs) en échec
   - [x] Dockerfile multi-étapes, tests verts
-- [ ] **Tâche 2** Image de production du panel · `feature/k3s-ansible-fronts-prod`
-  - [ ] `.dockerignore`, `serve.json` et tests en échec
-  - [ ] Dockerfile multi-étapes, tests verts
+- [x] **Tâche 2** Image de production du panel · `feature/k3s-ansible-fronts-prod`
+  - [x] `.dockerignore`, `serve.json` et tests en échec
+  - [x] Dockerfile multi-étapes, tests verts
 - [ ] **Tâche 3** Vérification du lot
 
 > Reprise : (vide)
