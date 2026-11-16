@@ -1,0 +1,32 @@
+# Versions épinglées : les monter ici, puis `make infra-vendre` pour les manifestes, puis rejouer.
+# Contrôlées le 2026-11-16 contre les publications officielles.
+k3s_version: v1.36.6+k3s1
+# SHA-256 de install.sh à l'étiquette k3s_version (dépôt k3s-io/k3s)
+k3s_install_sha256: 46177d4c99440b4c0311b67233823a8e8a2fc09693f6c89af1a7161e152fbfad
+# Helm 3 volontairement : Helm 4 a renommé --atomic, utilisé par le script de déploiement
+helm_version: v3.22.1
+cert_manager_version: v1.21.3
+cnpg_version: 1.30.1
+barman_plugin_version: v0.16.0
+
+ghcr_owner: tigamadou
+
+deploiement_envs:
+  prod:
+    namespace: prod
+  preprod:
+    namespace: preprod
+
+# Ports du cluster ouverts seulement entre les IP des nœuds
+ports_cluster:
+  - { port: "6443", proto: tcp }
+  - { port: "10250", proto: tcp }
+  - { port: "51820", proto: udp }
+# Pods et services k3s : entrée autorisée, sans exposition externe
+reseaux_internes_k3s:
+  - 10.42.0.0/16
+  - 10.43.0.0/16
+
+# Quota de preprod (spec 8.5, A9)
+preprod_quota_memoire_limites: 2Gi
+preprod_quota_memoire_requetes: 1536Mi

@@ -1,0 +1,7 @@
+---
+- name: Nœuds k3s
+  hosts: noeuds
+  gather_facts: false
+  tasks:
+    - name: Rien à faire pour l'instant
+      ansible.builtin.meta: noop

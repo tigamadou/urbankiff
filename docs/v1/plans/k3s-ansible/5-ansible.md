@@ -38,13 +38,13 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : 🟡 en cours · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
-  - [ ] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
-  - [ ] Test rouge : `make infra-lint` échoue (rien à vérifier / cible absente)
-  - [ ] `Dockerfile`, `ansible.cfg`, `requirements.yml`, `.ansible-lint`, `inventory.example.yml`, `group_vars/all.yml`
-  - [ ] `make/infra.mk` : `infra-image`, `infra-ansible`, `infra-lint`
+- [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
+  - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
+  - [x] Test rouge : `make infra-lint` échoue (rien à vérifier / cible absente)
+  - [x] `Dockerfile`, `ansible.cfg`, `requirements.yml`, `.ansible-lint`, `inventory.example.yml`, `group_vars/all.yml`
+  - [x] `make/infra.mk` : `infra-image`, `infra-ansible`, `infra-lint`
 - [ ] **Tâche 2** `site.yml` et assert des variables obligatoires · `feature/k3s-ansible-ansible`
   - [ ] Test d'échec de l'assert (inventaire invalide), rouge puis vert
   - [ ] `site.yml` (deux plays, rôles vides) ; cible `infra-test-assert`

@@ -1,0 +1,26 @@
+# Copier en inventory.yml (ignoré par git) et compléter. Jamais de clé privée ici : la clé SSH vient de l'agent SSH.
+all:
+  children:
+    noeuds:
+      children:
+        serveur:
+          hosts:
+            urbankiff-a:
+              ansible_host: 203.0.113.10
+              # root au premier passage (image Contabo), puis un compte de admin_users
+              ansible_user: root
+        agents:
+          hosts: {}
+          # Exemple pour le nœud B :
+          # hosts:
+          #   urbankiff-b:
+          #     ansible_host: 203.0.113.11
+          #     ansible_user: root
+      vars:
+        admin_users:
+          - name: admin
+            pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE"
+        letsencrypt_email: "a-completer"
+        deploy_keys:
+          preprod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPREPRODFAKEPREPRODFAKEPREPRODFAKEPREPROD"
+          prod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPR"
