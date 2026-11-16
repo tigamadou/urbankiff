@@ -31,12 +31,12 @@ cohérentes entre elles (test bats `inventaire.bats`).
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ⬜ à faire · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Retirer imgproxy partout · `feature/k3s-ansible-nettoyage`
-  - [ ] Compose, `devteam.agent.conf`, `.claude/devteam.projet.md`, `.env.template`
-  - [ ] `IMGPROXY_SETUP.md`, `generate_imgproxy_url.py`, `useSignedUrl.js`
-  - [ ] Listes de secrets et inventaire (`IMGPROXY_KEY`, `IMGPROXY_SALT`)
+- [x] **Tâche 1** Retirer imgproxy partout · `feature/k3s-ansible-nettoyage`
+  - [x] Compose, `devteam.agent.conf`, `.claude/devteam.projet.md`, `.env.template`
+  - [x] `IMGPROXY_SETUP.md`, `generate_imgproxy_url.py`, `useSignedUrl.js`
+  - [x] Listes de secrets et inventaire (`IMGPROXY_KEY`, `IMGPROXY_SALT`)
 - [ ] **Tâche 2** Retirer l'ancien déploiement et réécrire le README
   - [ ] `deploys/`, `caddyprod/`, Compose de prod, `apps/backup_service/`, `apps/minio/`
   - [ ] `README.md`

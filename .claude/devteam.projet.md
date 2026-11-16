@@ -18,7 +18,7 @@ Sur l'hôte : `docker`, `make`, `git`, `gh` seulement. Les cibles de déploiemen
 - Profils : `api` (api, workers, migrations), `front` (nextjs sur l'api de la stack principale), `panel` (panel sur
   l'api de la stack principale), `complet` (api, workers, migrations, nextjs, panel).
 - Services d'infrastructure partagés, lancés par la stack principale : `postgresDB`, `redis`, `minio` (RustFS),
-  `mailhog`, `imgproxy`, `caddy`.
+  `mailhog`, `caddy`.
 - « Pas de place » de `agent-up` : ligne `agent-env : pas de place : …` (code 75 du script, réessayer plus tard) ;
   autres échecs = erreur.
 - La stack principale se lance toujours depuis le dépôt principal.

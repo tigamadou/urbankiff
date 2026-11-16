@@ -22,8 +22,6 @@ Règles :
 | `REDIS_PASSWORD` | mot de passe Redis (Redis n'en avait pas) | — | Redis actuel arrêté (mesures conservatoires) | aléatoire, 40 caractères, script |
 | `MINIO_ROOT_USER` | administrateur du stockage S3 | `apps/api/env.*`, `apps/minio/.env.*` (versionnés) | port public de MinIO fermé ; instance de A retirée à sa reconstruction, après export des objets | aléatoire, 20 caractères, script |
 | `MINIO_ROOT_PASSWORD` | mot de passe administrateur du stockage S3 | idem | idem | aléatoire, 40 caractères, script |
-| `IMGPROXY_KEY` | clé de signature des URL d'images | `.env` racine (local), `REACT_APP_IMGPROXY_KEY` du panel | imgproxy actuel arrêté avec la stack | aléatoire hexadécimal, 64 caractères, script |
-| `IMGPROXY_SALT` | sel de signature des URL d'images | idem | idem | aléatoire hexadécimal, 64 caractères, script |
 | `SMTP_USERNAME` | identifiant du fournisseur SMTP | `apps/api/env.*` (versionnés) | console du fournisseur SMTP : révoquer le jeton actuel | saisie masquée (script) |
 | `SMTP_PASSWORD` | jeton du fournisseur SMTP | idem | idem | saisie masquée (script) |
 | `TWILIO_ACCOUNT_SID` | compte Twilio (SMS) | `apps/api/env.*` (versionnés) | — (identifiant de compte, inchangé) | saisie masquée (script) |
