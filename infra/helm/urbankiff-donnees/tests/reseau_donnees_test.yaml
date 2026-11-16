@@ -1,0 +1,190 @@
+suite: réseau des données
+templates:
+  - templates/reseau-donnees.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: liste exhaustive des politiques des données
+    asserts:
+      - hasDocuments:
+          count: 8
+      - equal:
+          path: metadata.name
+          value: postgres-entree
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: redis-entree
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: rustfs-entree
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: postgres-sortie
+        documentIndex: 3
+      - equal:
+          path: metadata.name
+          value: rustfs-bucket-sortie
+        documentIndex: 4
+      - equal:
+          path: metadata.name
+          value: sauvegarde-fichiers-sortie
+        documentIndex: 5
+      - equal:
+          path: metadata.name
+          value: restauration-sortie
+        documentIndex: 6
+  - it: entrée de PostgreSQL depuis api, workers, migrations, restauration et l'opérateur
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.podSelector
+          value:
+            matchLabels:
+              cnpg.io/cluster: urbankiff-pg
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress]
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/part-of: urbankiff
+                    matchExpressions:
+                      - key: app.kubernetes.io/component
+                        operator: In
+                        values: [api, workers, migrations, restauration]
+              ports:
+                - port: 5432
+                  protocol: TCP
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: cnpg-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: cloudnative-pg
+              ports:
+                - port: 8000
+                  protocol: TCP
+  - it: entrée de Redis depuis api, workers, migrations
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: redis
+      - equal:
+          path: spec.ingress[0].from[0].podSelector.matchExpressions[0].values
+          value: [api, workers, migrations]
+      - equal:
+          path: spec.ingress[0].ports
+          value:
+            - port: 6379
+              protocol: TCP
+  - it: entrée de RustFS depuis les composants qui l'utilisent, pas depuis Next
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: spec.ingress[0].from[0].podSelector.matchExpressions[0].values
+          value: [api, workers, migrations, rustfs-bucket, sauvegarde-fichiers, restauration]
+      - equal:
+          path: spec.ingress[0].ports
+          value:
+            - port: 9000
+              protocol: TCP
+  - it: sortie de PostgreSQL vers Wasabi (443) et l'API Kubernetes (6443) seulement
+    documentIndex: 3
+    asserts:
+      - equal:
+          path: spec.egress[0].ports
+          value:
+            - port: 443
+              protocol: TCP
+      - equal:
+          path: spec.egress[0].to[0].ipBlock.except
+          value: [10.42.0.0/16, 10.43.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      - equal:
+          path: spec.egress[1].ports
+          value:
+            - port: 6443
+              protocol: TCP
+      - notExists:
+          path: spec.egress[1].to[0].ipBlock.except
+      - equal:
+          path: spec.egress[1].to[0].ipBlock.cidr
+          value: 192.0.2.10/32
+      - lengthEqual:
+          path: spec.egress
+          count: 2
+  - it: refuse le rendu sans l'IP du nœud pour l'API Kubernetes
+    set:
+      reseau:
+        apiKubernetes:
+          cidr: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: reseau.apiKubernetes.cidr
+  - it: refuse une adresse ouverte à tout Internet pour l'API Kubernetes
+    set:
+      reseau:
+        apiKubernetes:
+          cidr: 0.0.0.0/0
+    asserts:
+      - failedTemplate:
+          errorPattern: /32
+  - it: sorties des Jobs et du CronJob de fichiers
+    documentIndex: 5
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: sauvegarde-fichiers
+      - equal:
+          path: spec.egress[0].to[0].podSelector.matchLabels["app.kubernetes.io/component"]
+          value: rustfs
+      - equal:
+          path: spec.egress[0].ports
+          value:
+            - port: 9000
+              protocol: TCP
+      - equal:
+          path: spec.egress[1].ports
+          value:
+            - port: 443
+              protocol: TCP
+  - it: sortie de la restauration vers PostgreSQL, RustFS et Wasabi
+    documentIndex: 6
+    asserts:
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 5432
+  - it: sortie du Job de migrations dans le chart déployé avant (crochet pre-install)
+    documentIndex: 7
+    asserts:
+      - equal:
+          path: metadata.name
+          value: migrations-sortie
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 5432
+      - equal:
+          path: spec.egress[1].ports[0].port
+          value: 6379
+      - equal:
+          path: spec.egress[2].ports[0].port
+          value: 9000
+      - equal:
+          path: spec.egress[3].ports
+          value:
+            - port: 443
+              protocol: TCP
+            - port: 465
+              protocol: TCP
+            - port: 587
+              protocol: TCP

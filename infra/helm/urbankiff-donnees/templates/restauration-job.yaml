@@ -1,0 +1,115 @@
+{{- if .Values.restauration.active -}}
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $prefixe := trimSuffix "/" (required "restauration.prefixe est obligatoire quand restauration.active est vrai (par exemple restauration/2026-12-01/)" .Values.restauration.prefixe) -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: urbankiff-restauration
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "restauration") | nindent 4 }}
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "restauration") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      initContainers:
+        - name: recuperer
+          image: {{ .Values.image.rclone }}
+          args: ["copy", "wasabi:$(WASABI_BUCKET)/{{ $prefixe }}", "/restauration"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: WASABI_BUCKET
+              value: {{ include "urbankiff.wasabiBucket" . }}
+            {{- include "urbankiff.rcloneWasabiEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outils.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: restauration
+              mountPath: /restauration
+        - name: pg-restore
+          image: {{ printf "%s:%d" .Values.image.postgres (int .Values.postgres.version) }}
+          command: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/{{ .Values.restauration.fichierDump }}"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PGHOST
+              value: urbankiff-pg-rw
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: password
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: dbname
+          resources:
+            {{- toYaml .Values.outils.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: restauration
+              mountPath: /restauration
+      containers:
+        - name: fichiers
+          image: {{ .Values.image.rclone }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              {{- if .Values.restauration.copierFichiers }}
+              rclone copy /restauration/fichiers "rustfs:$BUCKET"
+              {{- end }}
+              {{- if .Values.restauration.purger }}
+              rclone purge "wasabi:$WASABI_BUCKET/{{ $prefixe }}"
+              {{- end }}
+              echo restauration terminée
+          env:
+            - name: HOME
+              value: /tmp
+            - name: BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: urbankiff-config
+                  key: MINIO_DEFAULT_BUCKETS
+            - name: WASABI_BUCKET
+              value: {{ include "urbankiff.wasabiBucket" . }}
+            {{- include "urbankiff.rcloneRustfsEnv" . | nindent 12 }}
+            {{- include "urbankiff.rcloneWasabiEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outils.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: restauration
+              mountPath: /restauration
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: restauration
+          emptyDir: {}
+{{- end }}

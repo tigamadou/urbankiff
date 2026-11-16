@@ -1,0 +1,45 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: urbankiff-rustfs-bucket
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "rustfs-bucket") | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "rustfs-bucket") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: bucket
+          image: {{ .Values.image.rclone }}
+          args: ["mkdir", "rustfs:$(BUCKET)"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: urbankiff-config
+                  key: MINIO_DEFAULT_BUCKETS
+            {{- include "urbankiff.rcloneRustfsEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outils.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

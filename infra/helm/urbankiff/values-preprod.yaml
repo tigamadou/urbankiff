@@ -1,0 +1,47 @@
+environnement: preprod
+
+hosts:
+  web: preprod.urbankiff.com
+  api: preprod.api.urbankiff.com
+  panel: preprod.panel.urbankiff.com
+
+# les valeurs Twilio de preprod restent inertes
+sms:
+  actif: false
+
+api:
+  ressources:
+    requests:
+      memory: 200Mi
+    limits:
+      memory: 384Mi
+
+workers:
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# 256 Mi et non davantage : la somme des limites en régime établi (1 728 Mi) plus le Job de migrations doit tenir
+# sous le quota de 2 Gio de la preprod (spec § 8.5, A9)
+migrations:
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+nextjs:
+  ressources:
+    requests:
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+panel:
+  ressources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi

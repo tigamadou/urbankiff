@@ -1,0 +1,14 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: urbankiff-pg-quotidien
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "postgres") | nindent 4 }}
+spec:
+  schedule: {{ .Values.postgres.planification | quote }}
+  method: plugin
+  cluster:
+    name: urbankiff-pg
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io

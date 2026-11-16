@@ -1,0 +1,241 @@
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $ns := .Values.reseau.namespaceOperateur -}}
+{{- $noeud := required "reseau.apiKubernetes.cidr est obligatoire : IP du noeud en /32" .Values.reseau.apiKubernetes.cidr -}}
+{{- if not (hasSuffix "/32" $noeud) -}}
+{{- fail (printf "reseau.apiKubernetes.cidr doit etre une IP en /32 (recu %s)" $noeud) -}}
+{{- end -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-entree
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: urbankiff-pg
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: urbankiff
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: [api, workers, migrations, restauration]
+      ports:
+        - port: 5432
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $ns }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cloudnative-pg
+      ports:
+        - port: 8000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-entree
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "redis" | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: urbankiff
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: [api, workers, migrations]
+      ports:
+        - port: 6379
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rustfs-entree
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "rustfs" | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: urbankiff
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: [api, workers, migrations, rustfs-bucket, sauvegarde-fichiers, restauration]
+      ports:
+        - port: 9000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: urbankiff-pg
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - {{- include "urbankiff.ipBlockInternet" . | nindent 10 }}
+      ports:
+        - port: 443
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: {{ $noeud }}
+      ports:
+        - port: {{ .Values.reseau.apiKubernetes.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rustfs-bucket-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "rustfs-bucket" | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "rustfs" | nindent 14 }}
+      ports:
+        - port: 9000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sauvegarde-fichiers-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "sauvegarde-fichiers" | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "rustfs" | nindent 14 }}
+      ports:
+        - port: 9000
+          protocol: TCP
+    - to:
+        - {{- include "urbankiff.ipBlockInternet" . | nindent 10 }}
+      ports:
+        - port: 443
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restauration-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "restauration" | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: urbankiff-pg
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "rustfs" | nindent 14 }}
+      ports:
+        - port: 9000
+          protocol: TCP
+    - to:
+        - {{- include "urbankiff.ipBlockInternet" . | nindent 10 }}
+      ports:
+        - port: 443
+          protocol: TCP
+---
+# Dans ce chart (déployé avant) : le Job de migrations est un crochet pre-install, il court avant les ressources du
+# chart urbankiff et a besoin de sa sortie dès la première installation.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: migrations-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "migrations" | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: urbankiff-pg
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "redis" | nindent 14 }}
+      ports:
+        - port: 6379
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "rustfs" | nindent 14 }}
+      ports:
+        - port: 9000
+          protocol: TCP
+    - to:
+        - {{- include "urbankiff.ipBlockInternet" . | nindent 10 }}
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 465
+          protocol: TCP
+        - port: 587
+          protocol: TCP

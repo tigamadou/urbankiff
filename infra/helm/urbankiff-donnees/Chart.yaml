@@ -1,0 +1,6 @@
+apiVersion: v2
+name: urbankiff-donnees
+description: Données d'Urbankiff (PostgreSQL CloudNativePG, Redis, RustFS, sauvegardes, restauration) et refus réseau par défaut
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

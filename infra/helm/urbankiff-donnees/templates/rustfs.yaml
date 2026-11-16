@@ -1,0 +1,92 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: urbankiff-rustfs
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "rustfs") | nindent 4 }}
+spec:
+  serviceName: urbankiff-rustfs
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "rustfs" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "rustfs") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: rustfs
+          image: {{ .Values.image.rustfs }}
+          ports:
+            - name: s3
+              containerPort: 9000
+          env:
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: MINIO_ROOT_USER
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: MINIO_ROOT_PASSWORD
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "false"
+            - name: RUSTFS_ADDRESS
+              value: 0.0.0.0:9000
+            - name: RUSTFS_VOLUMES
+              value: /data
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.rustfs.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: donnees
+              mountPath: /data
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: donnees
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.rustfs.stockage.classe }}
+        resources:
+          requests:
+            storage: {{ .Values.rustfs.stockage.taille }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-rustfs
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "rustfs") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "rustfs" | nindent 4 }}
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3

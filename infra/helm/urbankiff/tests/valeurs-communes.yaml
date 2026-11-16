@@ -1,0 +1,8 @@
+environnement: preprod
+secretsChecksum: test
+image:
+  etiquette: 1.2.3
+hosts:
+  web: preprod.urbankiff.com
+  api: preprod.api.urbankiff.com
+  panel: preprod.panel.urbankiff.com

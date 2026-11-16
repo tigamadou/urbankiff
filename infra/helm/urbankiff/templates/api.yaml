@@ -1,0 +1,77 @@
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $hoteApi := required "hosts.api est obligatoire (en-tête Host des sondes)" .Values.hosts.api -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: urbankiff-api
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "api") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "api" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "api") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: api
+          image: {{ include "urbankiff.imageApi" . }}
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            {{- include "urbankiff.envFrom" . | nindent 12 }}
+          env:
+            {{- include "urbankiff.envApp" . | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /api/health/
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ $hoteApi }}
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health/
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ $hoteApi }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.api.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-api
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "api") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "api" | nindent 4 }}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

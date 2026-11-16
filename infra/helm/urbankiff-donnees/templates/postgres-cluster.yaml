@@ -1,0 +1,83 @@
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $pg := .Values.postgres -}}
+{{- $version := int $pg.version -}}
+{{- if lt $version 15 -}}
+{{- fail "postgres.version doit être au moins 15 (jamais inférieure à la version du dump à restaurer)" -}}
+{{- end -}}
+{{- $restauration := $pg.restauration -}}
+{{- if $restauration.actif -}}
+{{- if not $restauration.instant -}}
+{{- fail "postgres.restauration.instant est obligatoire (horodatage de la restauration)" -}}
+{{- end -}}
+{{- if or (not $restauration.serveurSource) (eq $restauration.serveurSource $pg.serveur) -}}
+{{- fail "postgres.restauration.serveurSource est obligatoire et doit différer de postgres.serveur (sinon l'archive existante est polluée)" -}}
+{{- end -}}
+{{- end -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: urbankiff-pg
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "postgres") | nindent 4 }}
+  {{- if $pg.hibernation }}
+  annotations:
+    cnpg.io/hibernation: {{ $pg.hibernation | quote }}
+  {{- end }}
+spec:
+  instances: 1
+  imageName: {{ printf "%s:%d" .Values.image.postgres $version }}
+  enableSuperuserAccess: false
+  inheritedMetadata:
+    labels:
+      app.kubernetes.io/part-of: urbankiff
+      app.kubernetes.io/component: postgres
+  storage:
+    size: {{ $pg.stockage.taille }}
+    storageClass: {{ $pg.stockage.classe }}
+  resources:
+    {{- toYaml $pg.ressources | nindent 4 }}
+  postgresUID: 26
+  postgresGID: 26
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 26
+    capabilities:
+      drop:
+        - ALL
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 26
+    runAsGroup: 26
+    fsGroup: 26
+    seccompProfile:
+      type: RuntimeDefault
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: urbankiff-objectstore
+        serverName: {{ $pg.serveur }}
+  bootstrap:
+    {{- if $restauration.actif }}
+    recovery:
+      source: origine
+      database: {{ $pg.base }}
+      owner: {{ $pg.utilisateur }}
+      recoveryTarget:
+        targetTime: {{ $restauration.instant | quote }}
+    {{- else }}
+    initdb:
+      database: {{ $pg.base }}
+      owner: {{ $pg.utilisateur }}
+    {{- end }}
+  {{- if $restauration.actif }}
+  externalClusters:
+    - name: origine
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: urbankiff-objectstore
+          serverName: {{ $restauration.serveurSource }}
+  {{- end }}

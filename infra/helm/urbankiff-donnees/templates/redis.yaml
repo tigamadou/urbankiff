@@ -1,0 +1,92 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: urbankiff-redis
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "redis") | nindent 4 }}
+spec:
+  serviceName: urbankiff-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "redis" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "redis") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: redis
+          image: {{ .Values.image.redis }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              umask 077
+              printf 'requirepass %s\nappendonly yes\ndir /data\nbind 0.0.0.0\n' "$REDIS_PASSWORD" > /tmp/redis.conf
+              exec redis-server /tmp/redis.conf
+          ports:
+            - name: redis
+              containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: REDIS_PASSWORD
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: REDIS_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.redis.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: donnees
+              mountPath: /data
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: donnees
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.redis.stockage.classe }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.stockage.taille }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-redis
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "redis") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "redis" | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

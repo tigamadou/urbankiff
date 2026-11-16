@@ -35,23 +35,23 @@ la mission `k3s-ansible`, lot 6 (`charts`) sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé (tâches 1 à 10)
 
-- [ ] **Tâche 1** Outillage `make helm-*` et squelette des tests · `feature/k3s-ansible-charts`
-  - [ ] `make/helm.mk` (lint, rendu, valider, test, paquet, schémas) avec images épinglées
-  - [ ] schémas CRD versionnés (CloudNativePG, Barman Cloud, cert-manager) dans `infra/helm/schemas/`
-  - [ ] test-garde de rendu qui échoue tant qu'aucun chart n'existe
-- [ ] **Tâche 2** Chart `urbankiff-donnees` : socle (helpers, valeurs, refus par défaut, quota, DNS)
-- [ ] **Tâche 3** `urbankiff-donnees` : cluster PostgreSQL, archivage WAL, sauvegarde quotidienne, restauration à un instant
-- [ ] **Tâche 4** `urbankiff-donnees` : Redis authentifié, RustFS et Job de bucket
-- [ ] **Tâche 5** `urbankiff-donnees` : CronJob rclone, Job de restauration, NetworkPolicies des données
-- [ ] **Tâche 6** Chart `urbankiff` : socle, api, workers, Job de migrations
-- [ ] **Tâche 7** `urbankiff` : Next, panel, Ingress, NetworkPolicies des applications
-- [ ] **Tâche 8** Valeurs `prod` et `preprod` et tests transverses (isolement, limites, durcissement, SMS)
-- [ ] **Tâche 9** Documentation `docs/v1/infra/kubernetes.md`
-- [ ] **Tâche 10** Vérification du lot
+- [x] **Tâche 1** Outillage `make helm-*` et squelette des tests · `feature/k3s-ansible-charts`
+  - [x] `make/helm.mk` (lint, rendu, valider, test, paquet, schémas) avec images épinglées
+  - [x] schémas CRD versionnés (CloudNativePG, Barman Cloud, cert-manager) dans `infra/helm/schemas/`
+  - [x] test-garde de rendu qui échoue tant qu'aucun chart n'existe
+- [x] **Tâche 2** Chart `urbankiff-donnees` : socle (helpers, valeurs, refus par défaut, quota, DNS)
+- [x] **Tâche 3** `urbankiff-donnees` : cluster PostgreSQL, archivage WAL, sauvegarde quotidienne, restauration à un instant
+- [x] **Tâche 4** `urbankiff-donnees` : Redis authentifié, RustFS et Job de bucket
+- [x] **Tâche 5** `urbankiff-donnees` : CronJob rclone, Job de restauration, NetworkPolicies des données
+- [x] **Tâche 6** Chart `urbankiff` : socle, api, workers, Job de migrations
+- [x] **Tâche 7** `urbankiff` : Next, panel, Ingress, NetworkPolicies des applications
+- [x] **Tâche 8** Valeurs `prod` et `preprod` et tests transverses (isolement, limites, durcissement, SMS)
+- [x] **Tâche 9** Documentation `docs/v1/infra/kubernetes.md`
+- [x] **Tâche 10** Vérification du lot
 
-> Reprise : (vide)
+> Reprise : (vide). Écarts : quota de 2 Gio (A9, plus de test attendu en échec) ; sortie du Job de migrations placée dans urbankiff-donnees (crochet pre-install).
 
 Statuts : ⬜ à faire · 🟡 en cours · ✅ terminé. Cocher une case **seulement après tests verts**. Interruption en cours
 de tâche : cocher ce qui est fini et noter ici `> Reprise :` l'étape en cours, les fichiers touchés et la prochaine
@@ -169,14 +169,14 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   appartient au lot `deploiement`), `helm-schemas` (régénère les schémas, seul chemin avec accès réseau, documenté).
   Tous les `docker run` montent le dépôt en lecture seule sauf le dossier de sortie.
 
-- [ ] **Étape 1** : écrire d'abord un test-garde : `make helm-lint` et `make helm-test` échouent proprement si
+- [x] **Étape 1** : écrire d'abord un test-garde : `make helm-lint` et `make helm-test` échouent proprement si
   `infra/helm/urbankiff*` est absent, et `make helm-rendu` sans `ENV` affiche le message d'usage (code 2, même style que
   `make/secrets.mk`). Le voir échouer.
-- [ ] **Étape 2** : récupérer et versionner les schémas CRD aux versions de l'opérateur et du plugin épinglées dans
+- [x] **Étape 2** : récupérer et versionner les schémas CRD aux versions de l'opérateur et du plugin épinglées dans
   `infra/helm/README.md` (cette seule étape utilise le réseau, via `make helm-schemas`). Si un schéma manque (CRD sans
   schéma publié), le signaler.
-- [ ] **Étape 3** : implémenter `make/helm.mk` (`.PHONY`, `##` d'aide, variables d'images épinglées en tête).
-- [ ] **Étape 4** : relancer, vert ; vérifier que `make help` (si présent) liste les cibles ; cocher ; commit
+- [x] **Étape 3** : implémenter `make/helm.mk` (`.PHONY`, `##` d'aide, variables d'images épinglées en tête).
+- [x] **Étape 4** : relancer, vert ; vérifier que `make help` (si présent) liste les cibles ; cocher ; commit
   (`chore: outillage make helm`).
 
 ---
@@ -196,9 +196,9 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   `reseau.namespacePlateforme`, `reseau.apiKubernetes` pour PostgreSQL, `quota`) ; helpers `urbankiff.labels`,
   `urbankiff.securityContextPod`, `urbankiff.securityContextConteneur` réutilisés par toutes les tâches du chart.
 
-- [ ] **Étape 1** : tests : `environnement` hors `prod|preprod` fait échouer le rendu (`fail`) ; une NetworkPolicy
+- [x] **Étape 1** : tests : `environnement` hors `prod|preprod` fait échouer le rendu (`fail`) ; une NetworkPolicy
   `default-deny` (Ingress et Egress, `podSelector: {}`) est rendue ; le quota n'existe que si `quota.actif`.
-- [ ] **Étape 2** : implémenter ; `helm-lint` et `helm-test` verts ; cocher ; commit.
+- [x] **Étape 2** : implémenter ; `helm-lint` et `helm-test` verts ; cocher ; commit.
 
 ---
 
@@ -224,12 +224,12 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   `urbankiff-pg-rw:5432`. Valeur `postgres.restauration` : `{ actif, instant, serveurSource }` ; rendue en
   `bootstrap.recovery` avec `recoveryTarget.targetTime` et `externalClusters` (plugin Barman), jamais active par défaut.
 
-- [ ] **Étape 1** : tests : sans `restauration`, bootstrap `initdb` avec la base et le propriétaire des valeurs ;
+- [x] **Étape 1** : tests : sans `restauration`, bootstrap `initdb` avec la base et le propriétaire des valeurs ;
   archivage WAL (`isWALArchiver: true`) ; planification quotidienne ; rétention 30 jours ; ressources de la table
   § 5.4 par environnement (lues dans les valeurs, testées en tâche 8) ; `securityContext` du `Cluster` conforme ;
   avec `postgres.restauration.actif` : `bootstrap.recovery` présent avec `targetTime` ; `version < 15` : échec ;
   annotation `cnpg.io/hibernation` absente par défaut, présente avec `postgres.hibernation: "on"`.
-- [ ] **Étape 2** : implémenter ; `helm-lint`, `helm-test` ; `helm-valider ENV=preprod` valide `Cluster`,
+- [x] **Étape 2** : implémenter ; `helm-lint`, `helm-test` ; `helm-valider ENV=preprod` valide `Cluster`,
   `ObjectStore`, `ScheduledBackup` avec les schémas de la tâche 1 ; cocher ; commit.
 
 ---
@@ -252,10 +252,10 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
 - Produit : services ci-dessus ; checksum sur les deux StatefulSets ; bucket `rustfs.bucket` (valeur
   `MINIO_DEFAULT_BUCKETS` côté application).
 
-- [ ] **Étape 1** : tests : le mot de passe n'apparaît dans aucun `args`/`command` (seulement `secretKeyRef`) ; `requirepass`
+- [x] **Étape 1** : tests : le mot de passe n'apparaît dans aucun `args`/`command` (seulement `secretKeyRef`) ; `requirepass`
   présent ; `appendonly yes` ; `readOnlyRootFilesystem` avec `emptyDir` sur `/tmp` ; volumes `/data` ; limites ;
   annotation de checksum ; Job du bucket avec limites et `securityContext`.
-- [ ] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
+- [x] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
 
 ---
 
@@ -286,12 +286,12 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   privées exclues par `reseau.cidrExclus`), et le port de l'API Kubernetes (`reseau.apiKubernetes`, 6443 vers l'IP du
   nœud) ; sortie de `sauvegarde-fichiers` et `restauration` : RustFS, 443 Wasabi, 53.
 
-- [ ] **Étape 1** : tests : CronJob rendu avec limites et `securityContext` ; absence de Job de restauration par
+- [x] **Étape 1** : tests : CronJob rendu avec limites et `securityContext` ; absence de Job de restauration par
   défaut ; avec `restauration.active` sans `prefixe` → échec ; avec `active` et préfixe → Job avec `pg_restore
   --no-owner --no-privileges --schema=public` ; aucun secret en argument ; aucune politique du chart ne contient une
   `namespaceSelector` autre que `kube-system` et `reseau.namespacePlateforme` ; aucune `ipBlock` n'omet `cidrExclus` ;
   chaque flux listé ci-dessus a sa politique, rien de plus (test par liste exhaustive des politiques et de leurs ports).
-- [ ] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
+- [x] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
 
 ---
 
@@ -321,11 +321,11 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   `sms.actif` (**à signaler** : seule la variable d'environnement est neutralisée, pas le code). Annotation
   `urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum }}` sur les gabarits de pods de l'api et des workers.
 
-- [ ] **Étape 1** : tests : image et étiquette ; commande du Job de migrations identique au contrat ; hook et
+- [x] **Étape 1** : tests : image et étiquette ; commande du Job de migrations identique au contrat ; hook et
   `hook-delete-policy` ; commande des workers ; `REDIS_ENDPOINT` construit et ordre des variables ; aucune clé secrète
   de l'inventaire en `value:` ; `sms.actif: false` neutralise Twilio, `true` l'expose par `secretKeyRef` ; checksum ;
   sondes avec en-tête `Host` ; limites et `securityContext` ; `emptyDir` sur `/tmp`.
-- [ ] **Étape 2** : implémenter ; `helm-lint`, `helm-test` ; cocher ; commit.
+- [x] **Étape 2** : implémenter ; `helm-lint`, `helm-test` ; cocher ; commit.
 
 ---
 
@@ -349,10 +349,10 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   api seulement (et Redis/RustFS si le code Next les appelle : vérifier dans `apps/nextjs`, sinon refusé) ; panel :
   aucune sortie (statique) ; workers : entrées aucune.
 
-- [ ] **Étape 1** : tests : trois hôtes et trois Secrets TLS ; aucun hôte `s3*` ; étiquette des fronts suffixée par
+- [x] **Étape 1** : tests : trois hôtes et trois Secrets TLS ; aucun hôte `s3*` ; étiquette des fronts suffixée par
   l'environnement ; chaque flux du § 5.3 existe et rien d'autre (liste exhaustive) ; Next sans règle de sortie
   Internet ; panel sans sortie ; entrée du solveur HTTP-01 ; limites et `securityContext` ; checksum sur Next.
-- [ ] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
+- [x] **Étape 2** : implémenter ; `helm-lint`, `helm-test`, `helm-valider ENV=preprod` ; cocher ; commit.
 
 ---
 
@@ -371,7 +371,7 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
 - Consomme : tout ce qui précède.
 - Produit : le contrôle d'ensemble suivant, qui doit échouer si une garantie disparaît.
 
-- [ ] **Étape 1** : écrire les tests transverses, sur les quatre combinaisons (2 charts × `prod`/`preprod`) :
+- [x] **Étape 1** : écrire les tests transverses, sur les quatre combinaisons (2 charts × `prod`/`preprod`) :
   1. aucun document NetworkPolicy ne référence l'autre environnement ni une `namespaceSelector` hors `kube-system` et
      plateforme ; toutes les `ipBlock` excluent les plages pod et service (`prod` ↔ `preprod` fermé) ;
   2. tout pod (Deployment, StatefulSet, Job, CronJob, `Cluster` CloudNativePG) a `requests` et `limits.memory` sur tous
@@ -380,12 +380,12 @@ valeur `reseau.namespacePlateforme` (défaut `plateforme`, § 5.1). Cluster Post
   4. valeurs prod rendues sans erreur et validées par kubeconform (`make helm-valider ENV=prod`) ;
   5. aucun document `Secret` contenant une valeur ; aucun `value:` d'une clé de l'inventaire des secrets ;
   6. **somme des limites mémoire de la preprod en régime établi** comparée à `quota.limitesMemoire`.
-- [ ] **Étape 2** : constater le test 6. Avec la table du § 5.4 la somme est **1 728 Mi** pour un quota de **1 536 Mi** et le
+- [x] **Étape 2** : constater le test 6. Avec la table du § 5.4 la somme est **1 728 Mi** pour un quota de **1 536 Mi** et le
   Job de migrations (rendu sous quota) n'a aucune marge : **s'arrêter et le signaler dans l'issue** (décision du
   développeur : relever le quota, diminuer des limites, ou exclure les Jobs). Ne pas modifier les limites de la spec ni
   le quota de sa propre initiative. En attendant la décision, laisser `quota.limitesMemoire: 1536Mi` (valeur de la spec)
   avec le test 6 marqué attendu en échec **et documenté**, jamais supprimé.
-- [ ] **Étape 3** : implémenter les valeurs ; `make helm-rendu ENV=prod` et `ENV=preprod` sans erreur ; tout vert sauf le
+- [x] **Étape 3** : implémenter les valeurs ; `make helm-rendu ENV=prod` et `ENV=preprod` sans erreur ; tout vert sauf le
   point 6 documenté ; cocher ; commit.
 
 ---
@@ -403,8 +403,8 @@ consommés (clé par clé, sans valeur), Secret `urbankiff-pg-app` ; hibernation
 préfixe, ce qui est purgé) ; utilisation des cibles `make helm-*` ; points laissés aux lots voisins (ClusterIssuer,
 variables Wasabi, nom du fichier de dump).
 
-- [ ] Relire le document contre les chartes rendues (`make helm-rendu ENV=preprod`) : tout nom cité existe.
-- [ ] Cocher ; commit (`docs: kubernetes.md`).
+- [x] Relire le document contre les chartes rendues (`make helm-rendu ENV=preprod`) : tout nom cité existe.
+- [x] Cocher ; commit (`docs: kubernetes.md`).
 
 ---
 
@@ -412,15 +412,15 @@ variables Wasabi, nom du fichier de dump).
 
 **Fichiers :** aucun nouveau (corrections éventuelles dans les fichiers du lot).
 
-- [ ] `make helm-lint` vert (les deux charts, valeurs par défaut, `prod` et `preprod`).
-- [ ] `make helm-test` vert (helm-unittest et tests transverses), point 6 de la tâche 8 documenté ou levé par décision.
-- [ ] `make helm-rendu ENV=prod` et `make helm-rendu ENV=preprod` sans erreur ; `make helm-valider ENV=prod` et
+- [x] `make helm-lint` vert (les deux charts, valeurs par défaut, `prod` et `preprod`).
+- [x] `make helm-test` vert (helm-unittest et tests transverses), point 6 de la tâche 8 documenté ou levé par décision.
+- [x] `make helm-rendu ENV=prod` et `make helm-rendu ENV=preprod` sans erreur ; `make helm-valider ENV=prod` et
   `ENV=preprod` (kubeconform strict, schémas CRD CloudNativePG, Barman Cloud et cert-manager) verts.
-- [ ] `make secrets-scan` à zéro (aucun secret dans le dépôt).
-- [ ] `make lint`, `make typecheck`, `make coverage-diff`, `make check-generated`, `make migrations-check` : sans objet pour
+- [x] `make secrets-scan` à zéro (aucun secret dans le dépôt).
+- [x] `make lint`, `make typecheck`, `make coverage-diff`, `make check-generated`, `make migrations-check` : sans objet pour
   ce lot (aucun code applicatif touché), le noter dans le rapport ; e2e : sans objet.
-- [ ] Périmètre : `make devteam-perimetre LOT=charts PLAN=docs/v1/plans/k3s-ansible/6-charts.md
+- [x] Périmètre : `make devteam-perimetre LOT=charts PLAN=docs/v1/plans/k3s-ansible/6-charts.md
   BASE=origin/feature/k3s-ansible` ; attendu : « Périmètre OK » (une ligne `HORS PÉRIMÈTRE` est corrigée ou signalée,
   jamais le plan modifié pour la faire disparaître).
-- [ ] Rapport final : `Statut: DONE|PARTIAL|BLOCKED`, tâches, commits, commandes et résultats, points à signaler (liste
+- [x] Rapport final : `Statut: DONE|PARTIAL|BLOCKED`, tâches, commits, commandes et résultats, points à signaler (liste
   de la tâche 9 + conflit de quota + `POSTGRES_PASSWORD` non lu + `sms.actif` neutralise la variable seulement).

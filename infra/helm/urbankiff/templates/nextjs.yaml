@@ -1,0 +1,69 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: urbankiff-nextjs
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "nextjs") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "nextjs" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "nextjs") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: nextjs
+          image: {{ include "urbankiff.imageFront" (dict "ctx" . "nom" "nextjs") }}
+          ports:
+            - name: http
+              containerPort: 3000
+          # le rendu serveur appelle l'api : sonder la page d'accueil chargerait l'api à chaque passage
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.nextjs.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-nextjs
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "nextjs") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "nextjs" | nindent 4 }}
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

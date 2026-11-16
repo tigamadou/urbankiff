@@ -1,0 +1,228 @@
+suite: api
+templates:
+  - templates/api.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: Deployment et Service de l'api sur 8000
+    asserts:
+      - isKind:
+          of: Deployment
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-api
+        documentIndex: 0
+      - isKind:
+          of: Service
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: urbankiff-api
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].port
+          value: 8000
+        documentIndex: 1
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: api
+        documentIndex: 1
+  - it: image et étiquette de la version
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/tigamadou/urbankiff-api:1.2.3
+      - notExists:
+          path: spec.template.spec.imagePullSecrets
+  - it: secret de tirage facultatif
+    documentIndex: 0
+    set:
+      image.secretTirage: mon-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: mon-secret
+  - it: étiquette obligatoire
+    set:
+      image.etiquette: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "image.etiquette"
+        documentIndex: 0
+  - it: libellés et empreinte des secrets
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: api
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: test
+  - it: variables par envFrom du Secret et de la ConfigMap
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: urbankiff-secrets
+            - configMapRef:
+                name: urbankiff-config
+  - it: identifiants de la base depuis le Secret généré par CloudNativePG
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: username
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: dbname
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_HOST
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: host
+  - it: REDIS_ENDPOINT construit après REDIS_PASSWORD, MINIO_ENDPOINT construit
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name == "REDIS_PASSWORD")].valueFrom.secretKeyRef.key
+          value: REDIS_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_ENDPOINT
+            value: redis://:$(REDIS_PASSWORD)@urbankiff-redis:6379/0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MINIO_ENDPOINT
+            value: urbankiff-rustfs:9000
+      - lengthEqual:
+          path: spec.template.spec.containers[0].env
+          count: 9
+  - it: sms.actif faux neutralise Twilio
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TWILIO_ACCOUNT_SID
+            value: desactive
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TWILIO_AUTH_TOKEN
+            value: desactive
+  - it: sms.actif vrai expose Twilio par secretKeyRef
+    documentIndex: 0
+    set:
+      sms.actif: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TWILIO_ACCOUNT_SID
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: TWILIO_ACCOUNT_SID
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TWILIO_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: TWILIO_AUTH_TOKEN
+  - it: sondes de santé avec en-tête Host et délai de 3 secondes
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /api/health/
+            port: http
+            httpHeaders:
+              - name: Host
+                value: preprod.api.urbankiff.com
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value:
+            path: /api/health/
+            port: http
+            httpHeaders:
+              - name: Host
+                value: preprod.api.urbankiff.com
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.timeoutSeconds
+          value: 3
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.timeoutSeconds
+          value: 3
+  - it: durcissement, emptyDir sur /tmp, limites, pas de jeton de service
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 384Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 200Mi

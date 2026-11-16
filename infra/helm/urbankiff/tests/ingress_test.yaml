@@ -1,0 +1,97 @@
+suite: ingress
+templates:
+  - templates/ingress.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: trois Ingress, un par hôte, nommés selon les services
+    asserts:
+      - hasDocuments:
+          count: 3
+      - equal:
+          path: metadata.name
+          value: urbankiff-nextjs
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-api
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: urbankiff-panel
+        documentIndex: 2
+  - it: Traefik, cert-manager et un Secret TLS par hôte
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+        documentIndex: 0
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt
+        documentIndex: 0
+      - equal:
+          path: spec.tls
+          value:
+            - hosts: [preprod.urbankiff.com]
+              secretName: urbankiff-web-tls
+        documentIndex: 0
+      - equal:
+          path: spec.tls
+          value:
+            - hosts: [preprod.api.urbankiff.com]
+              secretName: urbankiff-api-tls
+        documentIndex: 1
+      - equal:
+          path: spec.tls
+          value:
+            - hosts: [preprod.panel.urbankiff.com]
+              secretName: urbankiff-panel-tls
+        documentIndex: 2
+  - it: routage vers les services
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: preprod.urbankiff.com
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-nextjs
+            port:
+              number: 3000
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-api
+            port:
+              number: 8000
+        documentIndex: 1
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-panel
+            port:
+              number: 8080
+        documentIndex: 2
+  - it: aucun hôte de stockage
+    asserts:
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: '^s3'
+        documentIndex: 0
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: '^s3'
+        documentIndex: 1
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: '^s3'
+        documentIndex: 2
+  - it: hôtes obligatoires
+    set:
+      hosts.web: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "hosts.web"
