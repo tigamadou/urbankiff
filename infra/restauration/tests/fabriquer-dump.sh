@@ -33,7 +33,7 @@ if [ "$mode" != "vide" ]; then
 create role piege_role;
 create table piege_table (id integer);
 alter table piege_table owner to piege_role;
-grant select on piege_table to piege_role;
+grant select on file_file to piege_role;
 create extension pg_trgm;
 create function piege_copy() returns void language plpgsql as $$
 begin

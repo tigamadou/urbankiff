@@ -34,7 +34,7 @@ fabriqué par le test, sans aucune donnée réelle.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 3
+Statut : 🟡 en cours · Prochaine tâche : 4
 
 - [x] **Tâche 1** Squelette : dossier ignoré, cible de tests, bibliothèque commune · `feature/k3s-ansible-restauration`
   - [x] test bats de la bibliothèque (détection de version, garde-fous d'arguments), échec constaté
@@ -42,9 +42,9 @@ Statut : 🟡 en cours · Prochaine tâche : 3
 - [x] **Tâche 2** Fabrication du dump piégé pour les tests
   - [x] script `tests/fabriquer-dump.sh` : base Django migrée + pièges, `pg_dump -Fc`
   - [x] test bats : le dump est lisible par `pg_restore -l` et contient chaque piège
-- [ ] **Tâche 3** `inspecter-sauvegarde.sh` : partie base de données
-  - [ ] tests bats : chaque piège apparaît dans le rapport, aucune donnée personnelle
-  - [ ] implémentation du script
+- [x] **Tâche 3** `inspecter-sauvegarde.sh` : partie base de données
+  - [x] tests bats : chaque piège apparaît dans le rapport, aucune donnée personnelle
+  - [x] implémentation du script
 - [ ] **Tâche 4** `inspecter-sauvegarde.sh` : partie bucket
   - [ ] tests bats sur un dossier de bucket fabriqué
   - [ ] implémentation
