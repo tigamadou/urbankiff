@@ -119,3 +119,21 @@ REDIS_PASSWORD est déclaré avant REDIS_ENDPOINT : Kubernetes n'étend $(VAR) q
   value: desactive
 {{- end }}
 {{- end -}}
+
+{{/* Sortie vers Internet hors plages internes (cidrExclus). */}}
+{{- define "urbankiff.ipBlockInternet" -}}
+ipBlock:
+  cidr: 0.0.0.0/0
+  except:
+    {{- toYaml .Values.reseau.cidrExclus | nindent 4 }}
+{{- end -}}
+
+{{/* Origine Traefik : le Traefik de k3s tourne dans kube-system. */}}
+{{- define "urbankiff.origineTraefik" -}}
+namespaceSelector:
+  matchLabels:
+    kubernetes.io/metadata.name: kube-system
+podSelector:
+  matchLabels:
+    app.kubernetes.io/name: traefik
+{{- end -}}

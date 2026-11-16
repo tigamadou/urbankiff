@@ -1,0 +1,72 @@
+suite: nextjs
+templates:
+  - templates/nextjs.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: Deployment et Service sur 3000, image suffixée par l'environnement
+    asserts:
+      - equal:
+          path: metadata.name
+          value: urbankiff-nextjs
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/tigamadou/urbankiff-nextjs:1.2.3-preprod
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-nextjs
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].port
+          value: 3000
+        documentIndex: 1
+  - it: étiquette de la prod
+    documentIndex: 0
+    set:
+      environnement: prod
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/tigamadou/urbankiff-nextjs:1.2.3-prod
+  - it: écritures dans /tmp et /app/.next/cache seulement
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: next-cache
+            mountPath: /app/.next/cache
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+  - it: durcissement, sondes, limites, libellés, empreinte
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 384Mi
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: nextjs
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: test
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom

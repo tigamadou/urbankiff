@@ -1,0 +1,165 @@
+suite: réseau des applications
+templates:
+  - templates/reseau.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: liste exhaustive des politiques des applications
+    asserts:
+      - hasDocuments:
+          count: 6
+      - equal:
+          path: metadata.name
+          value: api-entree
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: nextjs-entree
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: panel-entree
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: solveur-http01-entree
+        documentIndex: 3
+      - equal:
+          path: metadata.name
+          value: applications-sortie
+        documentIndex: 4
+      - equal:
+          path: metadata.name
+          value: nextjs-sortie
+        documentIndex: 5
+  - it: entrée de l'api depuis Traefik et Next sur 8000
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: api
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/part-of: urbankiff
+                      app.kubernetes.io/component: nextjs
+              ports:
+                - port: 8000
+                  protocol: TCP
+  - it: entrée de Next et du panel depuis Traefik seulement
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 3000
+                  protocol: TCP
+        documentIndex: 1
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 8080
+                  protocol: TCP
+        documentIndex: 2
+  - it: entrée de Traefik vers les solveurs HTTP-01 de cert-manager
+    documentIndex: 3
+    asserts:
+      - equal:
+          path: spec.podSelector
+          value:
+            matchLabels:
+              acme.cert-manager.io/http01-solver: "true"
+      - equal:
+          path: spec.ingress[0].ports
+          value:
+            - port: 8089
+              protocol: TCP
+  - it: sorties de l'api, des workers et des migrations
+    documentIndex: 4
+    asserts:
+      - equal:
+          path: spec.podSelector.matchExpressions
+          value:
+            - key: app.kubernetes.io/component
+              operator: In
+              values: [api, workers, migrations]
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+      - equal:
+          path: spec.egress[0].to[0].podSelector.matchLabels
+          value:
+            cnpg.io/cluster: urbankiff-pg
+      - equal:
+          path: spec.egress[0].ports
+          value:
+            - port: 5432
+              protocol: TCP
+      - equal:
+          path: spec.egress[1].ports
+          value:
+            - port: 6379
+              protocol: TCP
+      - equal:
+          path: spec.egress[2].ports
+          value:
+            - port: 9000
+              protocol: TCP
+      - equal:
+          path: spec.egress[3].ports
+          value:
+            - port: 443
+              protocol: TCP
+            - port: 465
+              protocol: TCP
+            - port: 587
+              protocol: TCP
+      - equal:
+          path: spec.egress[3].to[0].ipBlock.except
+          value: [10.42.0.0/16, 10.43.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      - lengthEqual:
+          path: spec.egress
+          count: 4
+  - it: Next ne sort que vers l'api, sans Internet
+    documentIndex: 5
+    asserts:
+      - lengthEqual:
+          path: spec.egress
+          count: 1
+      - equal:
+          path: spec.egress[0].to
+          value:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/part-of: urbankiff
+                  app.kubernetes.io/component: api
+      - equal:
+          path: spec.egress[0].ports
+          value:
+            - port: 8000
+              protocol: TCP
