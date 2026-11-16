@@ -43,8 +43,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fichiers d'environnement de développement
         run: cp .env.template .env && cp apps/api/.env.temp apps/api/.env && cp apps/nextjs/env.example apps/nextjs/.env
+      - name: Identifiants Twilio factices (non secrets)
+        run: sed -i -e "s/^TWILIO_ACCOUNT_SID=.*/TWILIO_ACCOUNT_SID=ACtest00000000000000000000000000/" -e "s/^TWILIO_AUTH_TOKEN=.*/TWILIO_AUTH_TOKEN=test-token-ci/" apps/api/.env
       - name: Base de test
-        run: docker compose up -d --wait postgresDB
+        run: docker compose up -d --wait postgresDB redis
       - run: make lint-api
       - if: ${{ !cancelled() }}
         run: make migrations-check
