@@ -10,7 +10,7 @@ COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null | cut -c1-12)
 POSTE := infra/deploiement/poste
 POSTE_ENV := DEPOT_GITHUB=$(DEPOT_GITHUB) PROPRIETAIRE_GHCR=$(PROPRIETAIRE_GHCR)
 
-.PHONY: images-publier charts-publier deploiement secrets-cluster preprod-arret preprod-demarrage deploiement-test deploiement-lint
+.PHONY: images-publier charts-publier deploiement secrets-cluster preprod-arret preprod-demarrage deploiement-test deploiement-lint workflow-lint
 
 images-publier: ## Publie les images GHCR (VERSION=<x.y.z[-rc.n]> ENV=<prod|preprod>)
 	@$(POSTE_ENV) $(POSTE)/images-publier.sh "$(VERSION)" "$(ENV)" "$(COMMIT)"
@@ -35,3 +35,6 @@ deploiement-test: ## Tests des scripts de déploiement (bats, en conteneur)
 
 deploiement-lint: ## shellcheck des scripts de déploiement (en conteneur)
 	docker run --rm -v "$(CURDIR)":/repo:ro -w /repo $(SHELLCHECK_IMAGE) -x -P SCRIPTDIR -S warning infra/deploiement/urbankiff-deploy.sh infra/deploiement/poste/*.sh
+
+workflow-lint: ## actionlint des workflows GitHub (en conteneur)
+	docker run --rm -v "$(CURDIR)":/repo:ro -w /repo $(ACTIONLINT_IMAGE) -color

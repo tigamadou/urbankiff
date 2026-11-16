@@ -1,0 +1,131 @@
+# Déploiement par version (docs/v1/infra/deploiement.md) : une pré-release GitHub (vX.Y.Z-rc.N) publie et déploie en
+# preprod, une release (vX.Y.Z) en prod après approbation de l'environnement GitHub `prod`. Les jobs appellent les
+# mêmes cibles make que le poste du développeur. Les secrets ne passent que par l'entrée standard de SSH.
+name: Déploiement
+
+on:
+  release:
+    types: [prereleased, released]
+
+permissions: {}
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.calcul.outputs.version }}
+      environnement: ${{ steps.calcul.outputs.environnement }}
+      sha: ${{ steps.calcul.outputs.sha }}
+    steps:
+      - id: calcul
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PRERELEASE" = true ]; then
+            [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+)$ ]] || { echo "tag de pré-release attendu : vX.Y.Z-rc.N" >&2; exit 1; }
+            environnement=preprod
+          else
+            [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]] || { echo "tag de release attendu : vX.Y.Z (sans suffixe)" >&2; exit 1; }
+            environnement=prod
+          fi
+          {
+            echo "version=${BASH_REMATCH[1]}"
+            echo "environnement=$environnement"
+            echo "sha=${SHA:0:12}"
+          } >> "$GITHUB_OUTPUT"
+
+  images:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ needs.meta.outputs.environnement }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Publier les images
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GHCR_UTILISATEUR: ${{ github.actor }}
+          URBANKIFF_VAR_NEXT_PUBLIC_BACKEND_URL: ${{ vars.NEXT_PUBLIC_BACKEND_URL }}
+          URBANKIFF_VAR_NEXT_PUBLIC_BACKEND_URL_FRONT: ${{ vars.NEXT_PUBLIC_BACKEND_URL_FRONT }}
+          URBANKIFF_VAR_NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          URBANKIFF_VAR_BACKEND_URL: ${{ vars.BACKEND_URL }}
+          URBANKIFF_VAR_REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL }}
+          URBANKIFF_VAR_REACT_APP_IMAGEKIT_ENDPOINT: ${{ vars.REACT_APP_IMAGEKIT_ENDPOINT }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          ENVIRONNEMENT: ${{ needs.meta.outputs.environnement }}
+        run: make images-publier VERSION="$VERSION" ENV="$ENVIRONNEMENT"
+
+  charts:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.sha }}
+          persist-credentials: false
+      - name: Publier les charts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GHCR_UTILISATEUR: ${{ github.actor }}
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: make charts-publier VERSION="$VERSION"
+
+  deployer:
+    needs: [meta, images, charts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ needs.meta.outputs.environnement }}
+    concurrency:
+      group: deploiement-${{ needs.meta.outputs.environnement }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.sha }}
+          persist-credentials: false
+      - name: Préparer SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+      - name: Déployer, secrets et variables sur l'entrée standard
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          ENVIRONNEMENT: ${{ needs.meta.outputs.environnement }}
+        run: |
+          set -euo pipefail
+          noms() { grep -vE '^(#|$)' "$1" | sed -E 's/[ =].*//' | jq -R . | jq -s .; }
+          filtrer() { jq -r --argjson noms "$2" '. as $v | $noms[] | select($v[.] != null and $v[.] != "") | "\(.)=\($v[.])"'; }
+          {
+            printf '%s' "$SECRETS_JSON" | filtrer - "$(noms scripts/secrets/secrets.txt)"
+            printf '%s' "$VARS_JSON" | filtrer - "$(noms "scripts/secrets/variables-$ENVIRONNEMENT.txt")"
+          } | ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$RUNNER_TEMP/known_hosts" "deploy@$DEPLOY_HOST" "deploy $VERSION"
+      - name: Nettoyage
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"

@@ -210,3 +210,11 @@ noms_secrets() { grep -vE '^(#|$)' "$RACINE/scripts/secrets/secrets.txt" | cut -
   mk -n deploiement ENV=preprod VERSION=0.0.0-rc.1
   [ "$status" -eq 0 ]
 }
+
+@test "images-publier : toutes les variables fournies par URBANKIFF_VAR_<NOM>, gh variable list n'est pas appelé" {
+  export URBANKIFF_VAR_NEXT_PUBLIC_BACKEND_URL=a URBANKIFF_VAR_NEXT_PUBLIC_BACKEND_URL_FRONT=b URBANKIFF_VAR_NEXT_PUBLIC_GOOGLE_CLIENT_ID=c
+  export URBANKIFF_VAR_BACKEND_URL=d URBANKIFF_VAR_REACT_APP_BACKEND_URL=e URBANKIFF_VAR_REACT_APP_IMAGEKIT_ENDPOINT=f
+  mk images-publier VERSION=1.2.3-rc.1 ENV=preprod
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  ! grep -q '^gh variable' "$FAKE_LOG"
+}

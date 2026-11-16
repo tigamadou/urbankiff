@@ -19,9 +19,16 @@ NEXT_ARGS="NEXT_PUBLIC_BACKEND_URL NEXT_PUBLIC_BACKEND_URL_FRONT NEXT_PUBLIC_GOO
 PANEL_ARGS="REACT_APP_BACKEND_URL REACT_APP_IMAGEKIT_ENDPOINT"
 
 declare -A valeur
-while IFS='=' read -r nom contenu; do
-  [ -z "$nom" ] || valeur[$nom]="$contenu"
-done < <(variables_github "$env")
+depuis_github=0
+for nom in $NEXT_ARGS $PANEL_ARGS; do
+  depuis_env="URBANKIFF_VAR_$nom"
+  [ -n "${!depuis_env:-}" ] || depuis_github=1
+done
+if [ "$depuis_github" = 1 ]; then
+  while IFS='=' read -r nom contenu; do
+    [ -z "$nom" ] || valeur[$nom]="$contenu"
+  done < <(variables_github "$env")
+fi
 
 for nom in $NEXT_ARGS $PANEL_ARGS; do
   depuis_env="URBANKIFF_VAR_$nom"
