@@ -26,11 +26,3 @@ secrets-scan-historique: ## Cherche des secrets dans tout l'historique git d'un 
 ports-scan: ## Liste les ports TCP ouverts d'un hôte vus de l'extérieur (HOTE=<ip ou nom>)
 	@test -n "$(HOTE)" || { echo "Usage : make ports-scan HOTE=<ip ou nom>" >&2; exit 2; }
 	docker run --rm $(NMAP_IMAGE) -Pn -p 1-65535 --open -T4 $(HOTE)
-
-CADDYFILE_PROD := caddyprod/CaddyFile
-
-.PHONY: hotes-scan
-hotes-scan: ## Interroge en HTTPS chaque nom d'hôte du Caddyfile de prod et affiche le code de réponse (000 = aucune réponse)
-	@for h in $$(sed -nE 's/^([a-z0-9.-]+\.[a-z]+) *\{.*/\1/p' $(CADDYFILE_PROD)); do \
-	  printf '%s ' "$$h"; docker run --rm $(CURL_IMAGE) -s -o /dev/null -m 10 -w '%{http_code}\n' "https://$$h/" || echo; \
-	done

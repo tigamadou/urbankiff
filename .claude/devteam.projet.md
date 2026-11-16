@@ -7,8 +7,8 @@ dans le document cité par `budget`.
 ## docker
 
 Toutes les commandes de build, test, lint et génération passent par des cibles `make` qui lancent des conteneurs.
-Sur l'hôte : `docker`, `make`, `git`, `gh` seulement. Les cibles de déploiement manuel (`uploadDeploys`) et
-`init` (création des hôtes locaux) sont hors du périmètre des missions.
+Sur l'hôte : `docker`, `make`, `git`, `gh` seulement. La cible `init`
+(création des hôtes locaux) est hors du périmètre des missions.
 
 ## agent_env
 
