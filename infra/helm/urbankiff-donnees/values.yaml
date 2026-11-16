@@ -32,3 +32,29 @@ reseau:
   apiKubernetes:
     cidr: 0.0.0.0/0
     port: 6443
+
+postgres:
+  # version majeure : alignée ou supérieure à celle du dump à restaurer, jamais inférieure (spec § 5.11)
+  version: 15
+  base: urbankiff
+  utilisateur: urbankiff
+  stockage:
+    taille: 10Gi
+    classe: local-path
+  ressources:
+    requests:
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+  # cron à six champs (secondes en premier) : tous les jours à 02:00
+  planification: "0 0 2 * * *"
+  retention: 30d
+  # nom sous lequel le cluster archive ses WAL et sauvegardes dans Wasabi
+  serveur: urbankiff-pg
+  # "on" ou "off" pour poser l'annotation cnpg.io/hibernation ; absente par défaut (le script de déploiement la bascule)
+  hibernation: ""
+  # restauration à un instant précis ; jamais active par défaut
+  restauration:
+    actif: false
+    instant: ""
+    serveurSource: ""

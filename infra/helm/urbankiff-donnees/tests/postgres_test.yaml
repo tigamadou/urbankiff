@@ -1,0 +1,201 @@
+suite: postgresql
+templates:
+  - templates/postgres-cluster.yaml
+  - templates/postgres-objectstore.yaml
+  - templates/postgres-sauvegarde.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: cluster à une instance, bootstrap initdb avec la base et le propriétaire des valeurs
+    template: templates/postgres-cluster.yaml
+    asserts:
+      - isKind:
+          of: Cluster
+      - equal:
+          path: metadata.name
+          value: urbankiff-pg
+      - equal:
+          path: spec.instances
+          value: 1
+      - equal:
+          path: spec.imageName
+          value: ghcr.io/cloudnative-pg/postgresql:15
+      - equal:
+          path: spec.storage.storageClass
+          value: local-path
+      - equal:
+          path: spec.bootstrap.initdb
+          value:
+            database: urbankiff
+            owner: urbankiff
+      - notExists:
+          path: spec.bootstrap.recovery
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.inheritedMetadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.enableSuperuserAccess
+          value: false
+  - it: archive les WAL vers le plugin Barman Cloud
+    template: templates/postgres-cluster.yaml
+    asserts:
+      - equal:
+          path: spec.plugins
+          value:
+            - name: barman-cloud.cloudnative-pg.io
+              isWALArchiver: true
+              parameters:
+                barmanObjectName: urbankiff-objectstore
+                serverName: urbankiff-pg
+  - it: durcissement et ressources du cluster
+    template: templates/postgres-cluster.yaml
+    asserts:
+      - equal:
+          path: spec.securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 26
+            capabilities:
+              drop:
+                - ALL
+      - equal:
+          path: spec.podSecurityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 26
+            runAsGroup: 26
+            fsGroup: 26
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.resources.limits.memory
+          value: 384Mi
+      - equal:
+          path: spec.resources.requests.memory
+          value: 192Mi
+  - it: refuse une version de PostgreSQL inférieure à 15
+    template: templates/postgres-cluster.yaml
+    set:
+      postgres.version: 14
+    asserts:
+      - failedTemplate:
+          errorPattern: "15"
+  - it: accepte une version supérieure
+    template: templates/postgres-cluster.yaml
+    set:
+      postgres.version: 16
+    asserts:
+      - equal:
+          path: spec.imageName
+          value: ghcr.io/cloudnative-pg/postgresql:16
+  - it: aucune annotation d'hibernation par défaut
+    template: templates/postgres-cluster.yaml
+    asserts:
+      - notExists:
+          path: metadata.annotations["cnpg.io/hibernation"]
+  - it: annotation d'hibernation seulement sur valeur explicite
+    template: templates/postgres-cluster.yaml
+    set:
+      postgres.hibernation: "on"
+    asserts:
+      - equal:
+          path: metadata.annotations["cnpg.io/hibernation"]
+          value: "on"
+  - it: restauration à un instant précis
+    template: templates/postgres-cluster.yaml
+    set:
+      postgres.restauration:
+        actif: true
+        instant: "2026-12-01 10:00:00+00"
+        serveurSource: urbankiff-pg-ancien
+    asserts:
+      - notExists:
+          path: spec.bootstrap.initdb
+      - equal:
+          path: spec.bootstrap.recovery
+          value:
+            source: origine
+            database: urbankiff
+            owner: urbankiff
+            recoveryTarget:
+              targetTime: "2026-12-01 10:00:00+00"
+      - equal:
+          path: spec.externalClusters
+          value:
+            - name: origine
+              plugin:
+                name: barman-cloud.cloudnative-pg.io
+                parameters:
+                  barmanObjectName: urbankiff-objectstore
+                  serverName: urbankiff-pg-ancien
+  - it: la restauration exige un instant et un serveur source distinct du serveur d'archivage
+    template: templates/postgres-cluster.yaml
+    set:
+      postgres.restauration:
+        actif: true
+        instant: "2026-12-01 10:00:00+00"
+        serveurSource: urbankiff-pg
+    asserts:
+      - failedTemplate:
+          errorPattern: "serveurSource"
+  - it: magasin d'objets Wasabi, rétention 30 jours, compression
+    template: templates/postgres-objectstore.yaml
+    asserts:
+      - isKind:
+          of: ObjectStore
+      - equal:
+          path: metadata.name
+          value: urbankiff-objectstore
+      - equal:
+          path: spec.retentionPolicy
+          value: 30d
+      - equal:
+          path: spec.configuration.destinationPath
+          value: s3://urbankiff-test/pg
+      - equal:
+          path: spec.configuration.endpointURL
+          value: https://s3.eu-central-2.wasabisys.com
+      - equal:
+          path: spec.configuration.data.compression
+          value: gzip
+      - equal:
+          path: spec.configuration.wal.compression
+          value: gzip
+      - equal:
+          path: spec.configuration.s3Credentials
+          value:
+            accessKeyId:
+              name: urbankiff-secrets
+              key: WASABI_ACCESS_KEY_ID
+            secretAccessKey:
+              name: urbankiff-secrets
+              key: WASABI_SECRET_ACCESS_KEY
+  - it: wasabi.region et wasabi.bucket sont obligatoires
+    template: templates/postgres-objectstore.yaml
+    set:
+      wasabi.bucket: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "wasabi.bucket"
+  - it: sauvegarde quotidienne par le plugin
+    template: templates/postgres-sauvegarde.yaml
+    asserts:
+      - isKind:
+          of: ScheduledBackup
+      - equal:
+          path: spec.schedule
+          value: "0 0 2 * * *"
+      - equal:
+          path: spec.method
+          value: plugin
+      - equal:
+          path: spec.cluster.name
+          value: urbankiff-pg
+      - equal:
+          path: spec.pluginConfiguration.name
+          value: barman-cloud.cloudnative-pg.io
