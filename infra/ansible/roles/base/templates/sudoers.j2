@@ -1,0 +1,4 @@
+# Géré par Ansible. Comptes sans mot de passe : sudo sans mot de passe.
+{% for utilisateur in admin_users %}
+{{ utilisateur.name }} ALL=(ALL) NOPASSWD:ALL
+{% endfor %}

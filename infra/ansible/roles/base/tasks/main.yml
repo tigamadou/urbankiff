@@ -1,0 +1,99 @@
+---
+- name: Paquets de base
+  ansible.builtin.apt:
+    name: "{{ base_paquets }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Mises à jour de sécurité automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Comptes administrateurs
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+  loop: "{{ admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Clés SSH des administrateurs (aucune autre clé acceptée)
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.pubkey }}"
+    exclusive: true
+  loop: "{{ admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Sudo sans mot de passe pour les administrateurs
+  ansible.builtin.template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/urbankiff-admins
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Comptes du système
+  ansible.builtin.getent:
+    database: passwd
+  register: base_passwd
+
+- name: Comptes humains absents de admin_users
+  ansible.builtin.set_fact:
+    base_comptes_a_supprimer: >-
+      {%- set trouves = [] -%}
+      {%- set gardes = (admin_users | map(attribute="name") | list) + base_comptes_conserves -%}
+      {%- for nom, champs in base_passwd.ansible_facts.getent_passwd.items() -%}
+      {%- if base_uid_min <= (champs[1] | int) <= base_uid_max and nom not in gardes -%}
+      {%- set _ = trouves.append(nom) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ trouves }}
+
+- name: Suppression des comptes absents de admin_users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: true
+    force: true
+  loop: "{{ base_comptes_a_supprimer }}"
+
+- name: Durcissement SSH (clé uniquement ; root est fermé en dernier par le rôle fermeture_root)
+  ansible.builtin.template:
+    src: sshd.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-urbankiff.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: sshd -t -f %s
+  notify: Redémarrer ssh
+
+- name: Pare-feu
+  ansible.builtin.include_tasks: ufw.yml
+  when: base_gerer_ufw
+
+- name: Jail sshd de fail2ban
+  ansible.builtin.template:
+    src: fail2ban-sshd.local.j2
+    dest: /etc/fail2ban/jail.d/urbankiff.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer fail2ban
+
+- name: Service fail2ban actif
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

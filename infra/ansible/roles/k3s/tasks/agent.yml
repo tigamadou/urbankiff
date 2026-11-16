@@ -1,0 +1,36 @@
+---
+- name: Jeton de jonction lu sur le serveur
+  ansible.builtin.slurp:
+    src: "{{ k3s_jeton_serveur }}"
+  register: k3s_jeton_brut
+  delegate_to: "{{ groups['serveur'][0] }}"
+  become: true
+  no_log: true
+
+- name: Dossier de configuration de k3s
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configuration de l'agent k3s
+  ansible.builtin.template:
+    src: config-agent.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    k3s_jeton: "{{ (k3s_jeton_brut.content | b64decode) | trim }}"
+  no_log: true
+  notify: Redémarrer k3s-agent
+
+- name: Installation de k3s
+  ansible.builtin.include_tasks: installer.yml
+  vars:
+    k3s_mode: agent
+
+- name: Application de la configuration
+  ansible.builtin.meta: flush_handlers

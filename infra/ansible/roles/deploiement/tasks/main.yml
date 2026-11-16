@@ -1,0 +1,7 @@
+---
+- name: Compte, configuration, script et clés de déploiement
+  ansible.builtin.import_tasks: utilisateur.yml
+
+- name: ServiceAccount, Role et kubeconfig par namespace
+  ansible.builtin.include_tasks: kubernetes.yml
+  when: deploiement_k8s

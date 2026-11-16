@@ -1,0 +1,74 @@
+---
+- name: Compte deploy (mot de passe verrouillé)
+  ansible.builtin.user:
+    name: "{{ deploiement_utilisateur }}"
+    shell: /bin/bash
+    create_home: true
+    password_lock: true
+
+- name: Dossiers du compte deploy
+  ansible.builtin.file:
+    path: "/home/{{ deploiement_utilisateur }}/{{ item }}"
+    state: directory
+    owner: "{{ deploiement_utilisateur }}"
+    group: "{{ deploiement_utilisateur }}"
+    mode: "0700"
+  loop: [.ssh, .kube]
+
+- name: Dossier de configuration
+  ansible.builtin.file:
+    path: "{{ deploiement_dossier_config }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configuration de urbankiff-deploy par environnement
+  ansible.builtin.template:
+    src: deploy.env.j2
+    dest: "{{ deploiement_dossier_config }}/deploy.{{ item.key }}.env"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ deploiement_envs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Script de déploiement présent dans le dépôt
+  ansible.builtin.stat:
+    path: "{{ deploiement_script_source }}"
+  delegate_to: localhost
+  become: false
+  register: deploiement_script
+  tags: [script_deploiement]
+
+- name: Script de déploiement requis
+  ansible.builtin.assert:
+    that:
+      - deploiement_script.stat.exists
+    fail_msg: "infra/deploiement/urbankiff-deploy.sh est absent : lot deploiement non fusionné"
+    quiet: true
+  when: deploiement_script_requis
+  tags: [script_deploiement]
+
+- name: Installation du script de déploiement
+  ansible.builtin.copy:
+    src: "{{ deploiement_script_source }}"
+    dest: "{{ deploiement_script_cible }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: deploiement_script.stat.exists
+
+- name: Script de déploiement absent, installation sautée
+  ansible.builtin.debug:
+    msg: "{{ deploiement_script_source }} absent : script non installé (deploiement_script_requis est faux)"
+  when: not deploiement_script.stat.exists
+
+- name: Clés de déploiement, une commande forcée par environnement (aucune autre clé)
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: "/home/{{ deploiement_utilisateur }}/.ssh/authorized_keys"
+    owner: "{{ deploiement_utilisateur }}"
+    group: "{{ deploiement_utilisateur }}"
+    mode: "0600"

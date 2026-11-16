@@ -1,0 +1,27 @@
+---
+- name: Copie du manifeste
+  ansible.builtin.copy:
+    src: "{{ item.fichier }}"
+    dest: "{{ plateforme_dossier_manifestes }}/{{ item.fichier }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Différence avec le cluster
+  ansible.builtin.command: "k3s kubectl diff --server-side -f {{ plateforme_dossier_manifestes }}/{{ item.fichier }}"
+  register: plateforme_diff
+  # 0 : identique, 1 : différences ou ressources absentes, autre : échec
+  changed_when: false
+  failed_when: plateforme_diff.rc not in [0, 1]
+
+- name: Application du manifeste
+  ansible.builtin.command: "k3s kubectl apply --server-side -f {{ plateforme_dossier_manifestes }}/{{ item.fichier }}"
+  when: plateforme_diff.rc == 1
+  changed_when: true
+
+- name: Opérateur prêt
+  ansible.builtin.command: >-
+    k3s kubectl -n {{ item.espace }} wait
+    {{ ('deploy/' ~ item.deployment) if item.deployment else 'deploy --all' }}
+    --for=condition=Available --timeout={{ plateforme_attente }}
+  changed_when: false
