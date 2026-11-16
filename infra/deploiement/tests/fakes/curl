@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Faux curl : échoue FAKE_CURL_ECHECS fois (ou toujours si -1) puis réussit.
+set -euo pipefail
+: "${FAKE_LOG:?}" "${FAKE_STATE:?}"
+echo "curl $*" >> "$FAKE_LOG"
+n="$(cat "$FAKE_STATE/curl.n" 2>/dev/null || echo 0)"
+echo $((n + 1)) > "$FAKE_STATE/curl.n"
+echecs="${FAKE_CURL_ECHECS:-0}"
+[ "$echecs" -ge 0 ] && [ "$n" -ge "$echecs" ] || exit 22

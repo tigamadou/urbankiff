@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Faux flock : échoue si FAKE_FLOCK_ECHEC est défini.
+echo "flock $*" >> "${FAKE_LOG:?}"
+[ -z "${FAKE_FLOCK_ECHEC:-}" ]

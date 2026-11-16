@@ -35,23 +35,23 @@ de la mission `k3s-ansible`, lot 7 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé · Prochaine tâche : aucune
 
-- [ ] **Tâche 1** Script serveur : squelette, commande forcée, semver, verrou, configuration · `feature/k3s-ansible-deploiement`
-  - [ ] bats : faux binaires et cas de refus
-  - [ ] implémentation
-- [ ] **Tâche 2** Script serveur : entrée standard, Secrets, empreinte, réutilisation sans entrée
-  - [ ] bats : validation, taille, clés, aucune fuite
-  - [ ] implémentation
-- [ ] **Tâche 3** Script serveur : charts, déploiement des données puis de l'application, santé, arrêt et démarrage preprod
-  - [ ] bats : ordre des appels, `--atomic`, santé, préprod
-  - [ ] implémentation
-- [ ] **Tâche 4** Poste : `make/deploiement.mk` (images, charts, déploiement, secrets-cluster, preprod, tests)
-  - [ ] bats : faux `docker`, `gh`, `ssh`
-  - [ ] implémentation
-- [ ] **Tâche 5** Workflow `deploiement.yml` et actionlint
-- [ ] **Tâche 6** Documentation `docs/v1/infra/deploiement.md`
-- [ ] **Tâche 7** Vérification du lot
+- [x] **Tâche 1** Script serveur : squelette, commande forcée, semver, verrou, configuration · `feature/k3s-ansible-deploiement`
+  - [x] bats : faux binaires et cas de refus
+  - [x] implémentation
+- [x] **Tâche 2** Script serveur : entrée standard, Secrets, empreinte, réutilisation sans entrée
+  - [x] bats : validation, taille, clés, aucune fuite
+  - [x] implémentation
+- [x] **Tâche 3** Script serveur : charts, déploiement des données puis de l'application, santé, arrêt et démarrage preprod
+  - [x] bats : ordre des appels, `--atomic`, santé, préprod
+  - [x] implémentation
+- [x] **Tâche 4** Poste : `make/deploiement.mk` (images, charts, déploiement, secrets-cluster, preprod, tests)
+  - [x] bats : faux `docker`, `gh`, `ssh`
+  - [x] implémentation
+- [x] **Tâche 5** Workflow `deploiement.yml` et actionlint
+- [x] **Tâche 6** Documentation `docs/v1/infra/deploiement.md`
+- [x] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
 
