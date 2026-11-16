@@ -34,7 +34,7 @@ aussi 5.5 et le contrat 8.3). Plan de la mission `k3s-ansible`, lot 4 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Image de production de Next · `feature/k3s-ansible-fronts-prod`
   - [x] `.dockerignore` et tests (construction, lecture seule, 200, grep des valeurs) en échec
@@ -42,7 +42,7 @@ Statut : ⬜ à faire · Prochaine tâche : 1
 - [x] **Tâche 2** Image de production du panel · `feature/k3s-ansible-fronts-prod`
   - [x] `.dockerignore`, `serve.json` et tests en échec
   - [x] Dockerfile multi-étapes, tests verts
-- [ ] **Tâche 3** Vérification du lot
+- [x] **Tâche 3** Vérification du lot
 
 > Reprise : (vide)
 
