@@ -20,14 +20,14 @@ développeur.
 
 | n | Lot | Plan | Profil | Dépend de | Tâches | Issue | État |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | socle | `1-socle.md` | api | — | 3 | — | ⬜ |
-| 2 | nettoyage | `2-nettoyage.md` | complet | — | 5 | — | ⬜ |
-| 3 | api-prod | `3-api-prod.md` | api | — | 4 | — | ⬜ |
-| 4 | fronts-prod | `4-fronts-prod.md` | api | — | 3 | — | ⬜ |
-| 5 | ansible | `5-ansible.md` | api | socle | 9 | — | ⬜ |
-| 6 | charts | `6-charts.md` | api | socle | 10 | — | ⬜ |
-| 7 | deploiement | `7-deploiement.md` | api | socle | 7 | — | ⬜ |
-| 8 | restauration | `8-restauration.md` | api | socle | 8 | — | ⬜ |
+| 1 | socle | `1-socle.md` | api | — | 3 | #3 | ⬜ |
+| 2 | nettoyage | `2-nettoyage.md` | complet | — | 5 | #4 | ⬜ |
+| 3 | api-prod | `3-api-prod.md` | api | — | 4 | #5 | ⬜ |
+| 4 | fronts-prod | `4-fronts-prod.md` | api | — | 3 | #6 | ⬜ |
+| 5 | ansible | `5-ansible.md` | api | socle | 9 | #7 | ⬜ |
+| 6 | charts | `6-charts.md` | api | socle | 10 | #8 | ⬜ |
+| 7 | deploiement | `7-deploiement.md` | api | socle | 7 | #9 | ⬜ |
+| 8 | restauration | `8-restauration.md` | api | socle | 8 | #10 | ⬜ |
 
 États : ⬜ à faire · 🟡 en cours · 🔵 en revue · ✅ fusionné.
 
