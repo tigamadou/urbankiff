@@ -35,7 +35,7 @@ de la mission `k3s-ansible`, lot 7 sur 8.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 7
+Statut : ✅ terminé · Prochaine tâche : aucune
 
 - [x] **Tâche 1** Script serveur : squelette, commande forcée, semver, verrou, configuration · `feature/k3s-ansible-deploiement`
   - [x] bats : faux binaires et cas de refus
@@ -51,7 +51,7 @@ Statut : ⬜ à faire · Prochaine tâche : 7
   - [x] implémentation
 - [x] **Tâche 5** Workflow `deploiement.yml` et actionlint
 - [x] **Tâche 6** Documentation `docs/v1/infra/deploiement.md`
-- [ ] **Tâche 7** Vérification du lot
+- [x] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
 
