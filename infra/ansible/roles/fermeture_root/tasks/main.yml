@@ -7,10 +7,4 @@
     group: root
     mode: "0644"
     validate: sshd -t -f %s
-  register: fermeture_root_conf
-
-- name: Redémarrage de ssh si la fermeture vient d'être posée
-  ansible.builtin.service:
-    name: ssh
-    state: restarted
-  when: fermeture_root_conf is changed
+  notify: Redémarrer ssh après fermeture de root
