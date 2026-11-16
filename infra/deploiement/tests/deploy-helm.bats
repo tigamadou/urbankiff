@@ -118,11 +118,11 @@ numero() { grep -n -m1 -- "$1" "$FAKE_LOG" | cut -d: -f1; }
   ! grep -q 'valeur-SMTP_PASSWORD' "$FAKE_LOG"
 }
 
-@test "l'application reçoit reseau.apiKubernetes.cidr issu de la configuration, pas les données" {
+@test "les données reçoivent reseau.apiKubernetes.cidr issu de la configuration, pas l'application" {
   deployer
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  ligne_app="$(grep '^helm upgrade --install urbankiff ' "$FAKE_LOG")"
-  [[ "$ligne_app" == *"--set reseau.apiKubernetes.cidr=203.0.113.10/32"* ]]
   ligne_donnees="$(grep '^helm upgrade --install urbankiff-donnees ' "$FAKE_LOG")"
-  [[ "$ligne_donnees" != *"apiKubernetes"* ]]
+  [[ "$ligne_donnees" == *"--set reseau.apiKubernetes.cidr=203.0.113.10/32"* ]]
+  ligne_app="$(grep '^helm upgrade --install urbankiff ' "$FAKE_LOG")"
+  [[ "$ligne_app" != *"apiKubernetes"* ]]
 }

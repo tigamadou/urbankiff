@@ -192,14 +192,14 @@ telecharger_charts() {
 
 deployer_charts() {
   helm upgrade --install urbankiff-donnees "$TMP/charts/urbankiff-donnees" -n "$NAMESPACE" \
-    -f "$TMP/charts/urbankiff-donnees/values-$ENV.yaml" --wait --timeout 10m
+    -f "$TMP/charts/urbankiff-donnees/values-$ENV.yaml" --wait --timeout 10m \
+    --set "reseau.apiKubernetes.cidr=$API_SERVER_CIDR"
   kubectl wait cluster.postgresql.cnpg.io/urbankiff-pg -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
     || die "CloudNativePG n'est pas prêt : l'application n'est pas déployée"
   helm upgrade --install urbankiff "$TMP/charts/urbankiff" -n "$NAMESPACE" \
     -f "$TMP/charts/urbankiff/values-$ENV.yaml" --atomic --wait --timeout 10m \
     --set "image.etiquette=$VERSION" --set "secretsChecksum=$CHECKSUM" --set "environnement=$ENV" \
-    --set "wasabi.region=$WASABI_REGION,wasabi.bucket=$WASABI_BUCKET" \
-    --set "reseau.apiKubernetes.cidr=$API_SERVER_CIDR"
+    --set "wasabi.region=$WASABI_REGION,wasabi.bucket=$WASABI_BUCKET"
 }
 
 verifier_sante() {
