@@ -166,17 +166,101 @@ preparer_secrets() {
   lire_entree
   if [ "$ENTREE_PRESENTE" = 1 ]; then
     valider_entree
-    calculer_empreinte
-    appliquer_entree
   else
     log "aucune entrée standard : Secrets et variables existants réutilisés"
     lire_cluster
-    calculer_empreinte
   fi
+  calculer_empreinte
+}
+
+TMP=""
+nettoyer() { [ -z "$TMP" ] || rm -rf "$TMP"; }
+
+telecharger_charts() {
+  local chart
+  TMP="$(mktemp -d)"
+  export HELM_CACHE_HOME="$TMP/cache" HELM_CONFIG_HOME="$TMP/config" HELM_DATA_HOME="$TMP/data"
+  for chart in urbankiff-donnees urbankiff; do
+    helm pull "oci://ghcr.io/$OWNER/charts/$chart" --version "$VERSION" --untar --untardir "$TMP/charts" \
+      || die "chart introuvable : $chart $VERSION"
+  done
+}
+
+deployer_charts() {
+  helm upgrade --install urbankiff-donnees "$TMP/charts/urbankiff-donnees" -n "$NAMESPACE" \
+    -f "$TMP/charts/urbankiff-donnees/values-$ENV.yaml" --wait --timeout 10m
+  kubectl wait cluster.postgresql.cnpg.io/urbankiff-pg -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
+    || die "CloudNativePG n'est pas prêt : l'application n'est pas déployée"
+  helm upgrade --install urbankiff "$TMP/charts/urbankiff" -n "$NAMESPACE" \
+    -f "$TMP/charts/urbankiff/values-$ENV.yaml" --atomic --wait --timeout 10m \
+    --set "image.etiquette=$VERSION" --set "secretsChecksum=$CHECKSUM" --set "environnement=$ENV" \
+    --set "wasabi.region=$WASABI_REGION,wasabi.bucket=$WASABI_BUCKET"
+}
+
+verifier_sante() {
+  local hote essai
+  hote="$(kubectl get ingress urbankiff-api -n "$NAMESPACE" -o jsonpath='{.spec.rules[0].host}')"
+  [[ "$hote" =~ ^[a-z0-9.-]+$ ]] || die "hôte de l'Ingress urbankiff-api illisible"
+  for essai in $(seq 1 24); do
+    if curl -fsS --max-time 5 -o /dev/null "https://$hote/api/health/"; then
+      log "santé de l'api confirmée"
+      return 0
+    fi
+    sleep 5
+  done
+  die "l'api ne répond pas sur /api/health/ après 2 minutes"
 }
 
 cmd_deploy() {
   preparer_secrets
+  telecharger_charts
+  [ "$ENTREE_PRESENTE" = 0 ] || appliquer_entree
+  deployer_charts
+  verifier_sante
+  log "version $VERSION déployée dans $ENV"
+}
+
+LABEL_APPLICATION="app.kubernetes.io/part-of=urbankiff"
+CLUSTER_PG="cluster.postgresql.cnpg.io/urbankiff-pg"
+ANNOTATION_REPLICAS="urbankiff.com/replicas-avant"
+
+charges() { # <deployment|statefulset> : « nom replicas replicas-avant » par ligne
+  kubectl get "$1" -n "$NAMESPACE" -l "$LABEL_APPLICATION" \
+    -o go-template='{{range .items}}{{.metadata.name}} {{.spec.replicas}} {{with .metadata.annotations}}{{index . "urbankiff.com/replicas-avant"}}{{end}}{{"\n"}}{{end}}'
+}
+
+hibernation() { # <on|off>
+  local actuelle
+  actuelle="$(kubectl get "$CLUSTER_PG" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.cnpg\.io/hibernation}')"
+  [ "$actuelle" = "$1" ] || kubectl annotate "$CLUSTER_PG" -n "$NAMESPACE" "cnpg.io/hibernation=$1" --overwrite
+}
+
+cmd_preprod_arret() {
+  local genre nom replicas avant
+  for genre in deployment statefulset; do
+    while read -r nom replicas avant; do
+      [ -n "$nom" ] && [ "$replicas" != 0 ] || continue
+      kubectl annotate "$genre/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS=$replicas" --overwrite
+      kubectl scale "$genre/$nom" -n "$NAMESPACE" --replicas=0
+    done < <(charges "$genre")
+  done
+  hibernation on
+  log "preprod arrêtée"
+}
+
+cmd_preprod_demarrage() {
+  local genre nom replicas avant
+  hibernation off
+  kubectl wait "$CLUSTER_PG" -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
+    || die "CloudNativePG n'est pas prêt : les charges ne sont pas relancées"
+  for genre in deployment statefulset; do
+    while read -r nom replicas avant; do
+      [ -n "$nom" ] && [ "$replicas" = 0 ] && [[ "${avant:-}" =~ ^[1-9][0-9]*$ ]] || continue
+      kubectl scale "$genre/$nom" -n "$NAMESPACE" --replicas="$avant"
+      kubectl annotate "$genre/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS-"
+    done < <(charges "$genre")
+  done
+  log "preprod démarrée"
 }
 
 main() {
@@ -188,10 +272,13 @@ main() {
     preprod-*) [ "$ENV" = preprod ] || refuser "$COMMANDE n'existe qu'en preprod" ;;
   esac
   verrouiller
+  trap nettoyer EXIT
   export KUBECONFIG="$HOME/.kube/$ENV"
   log "commande $COMMANDE${VERSION:+, version $VERSION}, environnement $ENV"
   case "$COMMANDE" in
     deploy) cmd_deploy ;;
+    preprod-arret) cmd_preprod_arret ;;
+    preprod-demarrage) cmd_preprod_demarrage ;;
   esac
 }
 

@@ -171,3 +171,30 @@ empreinte_journal() { grep -o 'secretsChecksum=[0-9a-f]*' "$FAKE_LOG" | head -1;
   ! grep -qE '^kubectl (create|apply|delete|patch|replace)' "$FAKE_LOG"
   grep -q '^kubectl get secret urbankiff-secrets -n preprod' "$FAKE_LOG"
 }
+@test "l'empreinte change si une valeur change et ne dépend pas de l'ordre" {
+  deployer "$ENTREE"; a="$(empreinte_journal)"
+  [ -n "$a" ]
+  : > "$FAKE_LOG"; deployer "$ENTREE"; [ "$(empreinte_journal)" = "$a" ]
+  tac "$ENTREE" > "$BATS_TEST_TMPDIR/inverse"
+  : > "$FAKE_LOG"; deployer "$BATS_TEST_TMPDIR/inverse"; [ "$(empreinte_journal)" = "$a" ]
+  sed -i 's|^SMTP_PASSWORD=.*|SMTP_PASSWORD=autre|' "$ENTREE"
+  : > "$FAKE_LOG"; deployer "$ENTREE"; [ "$(empreinte_journal)" != "$a" ]
+}
+
+@test "l'empreinte change si une variable change" {
+  deployer "$ENTREE"; a="$(empreinte_journal)"
+  sed -i 's|^WEB_URL=.*|WEB_URL=https://autre.example|' "$ENTREE"
+  : > "$FAKE_LOG"; deployer "$ENTREE"; [ "$(empreinte_journal)" != "$a" ]
+}
+
+@test "sans entrée : aucun create/apply/delete/patch, empreinte identique à celle de l'entrée" {
+  deployer "$ENTREE"; a="$(empreinte_journal)"
+  etat_cluster_depuis_entree "$ENTREE"
+  : > "$FAKE_LOG"
+  deployer /dev/null
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  ! grep -qE '^kubectl (create|apply|delete|patch|replace)' "$FAKE_LOG"
+  grep -q '^kubectl get secret urbankiff-secrets -n preprod' "$FAKE_LOG"
+  [ "$(empreinte_journal)" = "$a" ]
+}
+
