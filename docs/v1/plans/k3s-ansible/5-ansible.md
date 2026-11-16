@@ -38,7 +38,7 @@ la mission `k3s-ansible`, lot 5 sur 8.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 3
+Statut : 🟡 en cours · Prochaine tâche : 4
 
 - [x] **Tâche 1** Socle du lot : image Ansible épinglée, `make/infra.mk` (`infra-image`, `infra-ansible`, `infra-lint`), configuration, inventaire d'exemple, `group_vars` · `feature/k3s-ansible-ansible`
   - [x] Vérifier l'inclusion `make/*.mk` et l'ignore de `inventory.yml` (socle fusionné)
@@ -48,9 +48,9 @@ Statut : 🟡 en cours · Prochaine tâche : 3
 - [x] **Tâche 2** `site.yml` et assert des variables obligatoires · `feature/k3s-ansible-ansible`
   - [x] Test d'échec de l'assert (inventaire invalide), rouge puis vert
   - [x] `site.yml` (deux plays, rôles vides) ; cible `infra-test-assert`
-- [ ] **Tâche 3** Harnais de test sur conteneur Ubuntu 24.04 (rouge) · `feature/k3s-ansible-ansible`
-  - [ ] Image cible systemd + sshd, script `tests/lancer.sh`, `tests/verifier.yml`, cible `infra-test`
-  - [ ] Constater l'échec des vérifications (rôles vides)
+- [x] **Tâche 3** Harnais de test sur conteneur Ubuntu 24.04 (rouge) · `feature/k3s-ansible-ansible`
+  - [x] Image cible systemd + sshd, script `tests/lancer.sh`, `tests/verifier.yml`, cible `infra-test`
+  - [x] Constater l'échec des vérifications (rôles vides)
 - [ ] **Tâche 4** Rôle `base` · `feature/k3s-ansible-ansible`
   - [ ] Paquets, mises à jour auto, administrateurs, sudo, suppression des comptes absents
   - [ ] sshd durci, ufw, fail2ban

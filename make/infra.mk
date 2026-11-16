@@ -27,3 +27,6 @@ infra-lint: infra-image ## ansible-lint, syntax-check, options k3s, manifestes v
 
 infra-test-assert: infra-image ## Vérifie que site.yml refuse les inventaires invalides
 	docker run --rm -v "$(CURDIR)":/repo:ro -e ANSIBLE_HOME=/tmp/ansible $(ANSIBLE_IMAGE) sh tests/assert.sh
+
+infra-test: infra-image ## Joue base et le volet utilisateur de deploiement sur un conteneur Ubuntu 24.04 jetable
+	IMAGE_ANSIBLE=$(ANSIBLE_IMAGE) sh $(ANSIBLE_DIR)/tests/lancer.sh

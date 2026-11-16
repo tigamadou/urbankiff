@@ -1,0 +1,10 @@
+# Une seule cible : le conteneur Ubuntu jetable. ansible_host, ansible_user et les clés viennent de lancer.sh.
+all:
+  children:
+    noeuds:
+      children:
+        serveur:
+          hosts:
+            cible: {}
+        agents:
+          hosts: {}
