@@ -4,6 +4,8 @@ import sys
 import django_heroku
 import datetime
 
+from django.core.exceptions import ImproperlyConfigured
+
 
 # ==================================================================================================
 # ENVIRONMENT SETTINGS
@@ -37,7 +39,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))).replace('/project', '')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'local')
 DEBUG = False if ENV == PRODUCTION else True
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '*').split(',') if host.strip()]
+if ENV in [STAGING, PRODUCTION] and ('ALLOWED_HOSTS' not in os.environ or '*' in ALLOWED_HOSTS):
+    raise ImproperlyConfigured('ALLOWED_HOSTS doit lister les hôtes servis, sans « * », en staging et en production.')
 
 AUTH_USER_MODEL = 'user.User'
 
@@ -311,7 +315,8 @@ else:
 # ==================================================================================================
 
 if ENV in [STAGING, PRODUCTION]:
-    django_heroku.settings(locals(), staticfiles=False)
+    # allowed_hosts=False : sinon django_heroku impose ALLOWED_HOSTS = ['*'].
+    django_heroku.settings(locals(), staticfiles=False, allowed_hosts=False)
 
 if TESTING:
     try:
