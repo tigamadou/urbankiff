@@ -70,3 +70,11 @@ tests:
           value: test
       - notExists:
           path: spec.template.spec.containers[0].envFrom
+  - it: BACKEND_URL vers le Service api, autorisé par la NetworkPolicy (port 8000)
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BACKEND_URL
+            value: http://urbankiff-api:8000
