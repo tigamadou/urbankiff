@@ -40,7 +40,7 @@ Posées par le même script depuis `scripts/secrets/variables-<env>.txt`.
 | Nom | Usage |
 | --- | --- |
 | `DJANGO_ENV` | mode de l'api |
-| `ALLOWED_HOSTS` | hôtes acceptés par Django |
+| `ALLOWED_HOSTS` | hôtes acceptés par Django ; obligatoire et sans `*` quand `DJANGO_ENV` vaut `staging` ou `production` (l'api refuse de démarrer sinon) |
 | `WEB_URL` | URL publique du front |
 | `API_URL` | URL publique de l'api |
 | `SMTP_SERVER` | serveur SMTP |
