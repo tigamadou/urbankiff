@@ -8,15 +8,69 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
-  - it: échoue si active sans préfixe
+  - it: absent avec un préfixe vide
+    set:
+      restauration.prefixe: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: restauration.active n'a plus d'effet
     set:
       restauration.active: true
     asserts:
+      - hasDocuments:
+          count: 0
+  - it: refuse un préfixe non conforme
+    set:
+      restauration.prefixe: "restauration/2026-12-01 x/"
+    asserts:
       - failedTemplate:
           errorPattern: "restauration.prefixe"
-  - it: Job de restauration avec pg_restore exact
+  - it: refuse un préfixe avec guillemet
     set:
-      restauration.active: true
+      restauration.prefixe: 'restauration/2026-12-01"/'
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: refuse un préfixe avec point-virgule
+    set:
+      restauration.prefixe: "restauration/2026-12-01;/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: refuse un préfixe avec ..
+    set:
+      restauration.prefixe: "restauration/../2026-12-01/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: refuse un préfixe avec dollar
+    set:
+      restauration.prefixe: "restauration/2026-12-01$(id)/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: refuse un préfixe hors du dossier restauration
+    set:
+      restauration.prefixe: "autre/2026-12-01/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "restauration.prefixe"
+  - it: accepte une date
+    set:
+      restauration.prefixe: restauration/2026-12-01/
+    asserts:
+      - isKind:
+          of: Job
+  - it: accepte le suffixe de la copie anonymisée
+    set:
+      restauration.prefixe: restauration/2026-11-17-prod-anonyme/
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].args
+          value: ["copy", "wasabi:$(WASABI_BUCKET)/restauration/2026-11-17-prod-anonyme", "/restauration"]
+  - it: Job de restauration, ordre des étapes et pg_restore exact
+    set:
       restauration.prefixe: restauration/2026-12-01/
     asserts:
       - isKind:
@@ -30,6 +84,12 @@ tests:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: restauration
       - equal:
+          path: spec.backoffLimit
+          value: 0
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+      - equal:
           path: spec.template.spec.initContainers[0].name
           value: recuperer
       - equal:
@@ -37,13 +97,51 @@ tests:
           value: ["copy", "wasabi:$(WASABI_BUCKET)/restauration/2026-12-01", "/restauration"]
       - equal:
           path: spec.template.spec.initContainers[1].name
-          value: pg-restore
+          value: remise-a-zero
       - equal:
           path: spec.template.spec.initContainers[1].image
           value: ghcr.io/cloudnative-pg/postgresql:15
       - equal:
-          path: spec.template.spec.initContainers[1].command
+          path: spec.template.spec.initContainers[2].name
+          value: pg-restore
+      - equal:
+          path: spec.template.spec.initContainers[2].image
+          value: ghcr.io/cloudnative-pg/postgresql:15
+      - equal:
+          path: spec.template.spec.initContainers[2].command
           value: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/base.dump"]
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: fichiers
+  - it: remise à zéro du schéma avec contrôle de propriété
+    set:
+      restauration.prefixe: restauration/2026-12-01/
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: 'ON_ERROR_STOP'
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: 'pg_has_role\(current_user, nspowner, ''USAGE''\)'
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: 'RAISE EXCEPTION'
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: '(?s)DROP SCHEMA public CASCADE;.*CREATE SCHEMA public;'
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGHOST
+            value: urbankiff-pg-rw
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: username
       - contains:
           path: spec.template.spec.initContainers[1].env
           content:
@@ -55,11 +153,21 @@ tests:
       - contains:
           path: spec.template.spec.initContainers[1].env
           content:
-            name: PGHOST
-            value: urbankiff-pg-rw
-  - it: copie les fichiers vers RustFS puis purge le préfixe
+            name: PGDATABASE
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: dbname
+      - contains:
+          path: spec.template.spec.initContainers[2].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+  - it: copie les fichiers seulement s'ils existent, sans purge
     set:
-      restauration.active: true
       restauration.prefixe: restauration/2026-12-01/
     asserts:
       - equal:
@@ -67,23 +175,34 @@ tests:
           value: ["sh", "-c"]
       - matchRegex:
           path: spec.template.spec.containers[0].args[0]
+          pattern: '\[ -d /restauration/fichiers \]'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
           pattern: 'rclone copy /restauration/fichiers "rustfs:\$BUCKET"'
       - matchRegex:
           path: spec.template.spec.containers[0].args[0]
-          pattern: 'rclone purge "wasabi:\$WASABI_BUCKET/restauration/2026-12-01"'
-  - it: sans copie ni purge si désactivées
+          pattern: 'sans fichiers'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'echo restauration terminée\s*$'
+  - it: ne supprime jamais rien
     set:
-      restauration.active: true
       restauration.prefixe: restauration/2026-12-01/
-      restauration.copierFichiers: false
-      restauration.purger: false
     asserts:
       - notMatchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: 'purge|sync|delete'
+      - notMatchRegex:
+          path: spec.template.spec.initContainers[1].args[0]
+          pattern: 'purge|sync|delete'
+      - notMatchRegex:
+          path: spec.template.spec.initContainers[2].command[0]
+          pattern: 'purge|sync|delete'
+      - notMatchRegex:
           path: spec.template.spec.containers[0].args[0]
-          pattern: 'rclone (copy|purge)'
-  - it: aucun secret en argument, tout par secretKeyRef, durcissement complet
+          pattern: 'purge|sync|delete'
+  - it: aucun secret en argument, durcissement complet
     set:
-      restauration.active: true
       restauration.prefixe: restauration/2026-12-01/
     asserts:
       - equal:
@@ -99,6 +218,9 @@ tests:
           path: spec.template.spec.initContainers[1].securityContext.readOnlyRootFilesystem
           value: true
       - equal:
+          path: spec.template.spec.initContainers[2].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
           path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
           value: true
       - exists:
@@ -106,7 +228,8 @@ tests:
       - exists:
           path: spec.template.spec.initContainers[1].resources.limits.memory
       - exists:
+          path: spec.template.spec.initContainers[2].resources.limits.memory
+      - exists:
           path: spec.template.spec.containers[0].resources.limits.memory
-      - equal:
-          path: spec.backoffLimit
-          value: 0
+      - exists:
+          path: spec.template.spec.initContainers[1].securityContext.capabilities.drop

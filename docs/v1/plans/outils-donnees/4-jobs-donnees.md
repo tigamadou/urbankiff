@@ -39,11 +39,11 @@ autorité). Plan de la mission `outils-donnees`, lot 4 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : 🟡 en cours · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Job de restauration : remise à zéro du schéma, sans purge, rendu à la demande · `feature/outils-donnees-jobs-donnees`
-  - [ ] tests `restauration_test.yaml` réécrits (échec attendu)
-  - [ ] `restauration-job.yaml` et section `restauration` de `values.yaml`
+- [x] **Tâche 1** Job de restauration : remise à zéro du schéma, sans purge, rendu à la demande · `feature/outils-donnees-jobs-donnees`
+  - [x] tests `restauration_test.yaml` réécrits (échec attendu)
+  - [x] `restauration-job.yaml` et section `restauration` de `values.yaml`
 - [ ] **Tâche 2** Job après restauration (chart `urbankiff`)
   - [ ] tests `apres_restauration_test.yaml`
   - [ ] `apres-restauration-job.yaml` et valeurs `apresRestauration`
