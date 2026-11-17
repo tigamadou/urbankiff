@@ -1,6 +1,7 @@
 suite: outils
 templates:
   - templates/outils-ingress.yaml
+  - templates/pgadmin.yaml
 values:
   - valeurs-communes.yaml
 tests:
@@ -11,3 +12,259 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: hosts.db est obligatoire
+  - it: pgAdmin rend une ConfigMap, un Deployment et un Service
+    template: templates/pgadmin.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin-config
+        documentIndex: 0
+      - isKind:
+          of: Deployment
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 1
+      - isKind:
+          of: Service
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 2
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+        documentIndex: 2
+  - it: libellés part-of et composant pgadmin, une réplique en Recreate
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: pgadmin
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+  - it: identifiants pgAdmin par secretKeyRef, jamais en value
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_DEFAULT_EMAIL
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: PGADMIN_EMAIL
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: PGADMIN_MOT_DE_PASSE
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: PGADMIN_DEFAULT_PASSWORD
+            value: ""
+  - it: mode serveur, mises à jour désactivées, servers.json et fichier de mots de passe
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_CONFIG_SERVER_MODE
+            value: "True"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED
+            value: "False"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_SERVER_JSON_FILE
+            value: /pgadmin4/servers.json
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSFILE
+            value: /pgpass/pgpass
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_LISTEN_PORT
+            value: "8080"
+  - it: servers.json cible urbankiff-pg-rw sans mot de passe
+    template: templates/pgadmin.yaml
+    documentIndex: 0
+    asserts:
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Host": "urbankiff-pg-rw"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Port": 5432'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"MaintenanceDB": "urbankiff"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Username": "urbankiff"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"SSLMode": "prefer"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"PassFile": "/pgpass/pgpass"'
+      - notMatchRegex:
+          path: data["servers.json"]
+          pattern: '(?i)"password"'
+  - it: le mot de passe de la base vient du Secret urbankiff-pg-app copié en 0600 par l'init container
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pgpass-secret
+            secret:
+              secretName: urbankiff-pg-app
+              items:
+                - key: pgpass
+                  path: pgpass
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pgpass
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: dpage/pgadmin4:9.9.0
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: chmod 0600 /pgpass/pgpass
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: pgpass-secret
+            mountPath: /pgpass-secret
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: pgpass
+            mountPath: /pgpass
+  - it: seuls des emptyDir sont inscriptibles, servers.json et le Secret en lecture seule
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: donnees
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: journaux
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: donnees
+            mountPath: /var/lib/pgadmin
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: journaux
+            mountPath: /var/log/pgadmin
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: serveurs
+            mountPath: /pgadmin4/servers.json
+            subPath: servers.json
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: serveurs
+            configMap:
+              name: urbankiff-pgadmin-config
+  - it: pgAdmin durci, sondes, limites et empreinte des secrets
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    set:
+      secretsChecksum: abc123
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 160Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 320Mi
+      - exists:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+      - exists:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: abc123
