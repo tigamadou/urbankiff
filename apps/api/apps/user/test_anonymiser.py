@@ -4,13 +4,14 @@ import tempfile
 from io import StringIO
 from unittest import mock
 
+from django.contrib.sessions.models import Session
 from django.core.management import call_command
-from django.core.management.base import CommandError
+from django.core.management.base import CommandError, OutputWrapper
 from django.test import SimpleTestCase, TestCase
 
 from apps.user.factories import UserFactory
-from apps.user.management.commands.anonymiser import REGLES_PAR_DEFAUT, charger_regles
-from apps.user.models import User
+from apps.user.management.commands.anonymiser import REGLES_PAR_DEFAUT, appliquer, charger_regles
+from apps.user.models import Invitation, User
 
 REGLES_VIDES = {
     "version": 1,
@@ -172,3 +173,131 @@ class ChargementReglesTests(SimpleTestCase):
         }
         regles = charger_regles(self.regles(tables_classees={"t": {"colonnes": colonnes}}))
         self.assertEqual(regles["tables_classees"]["t"]["cle"], "id")
+
+
+def regles_moteur(vider=(), classees=None):
+    regles = dict(REGLES_VIDES)
+    regles["tables_a_vider"] = list(vider)
+    regles["tables_classees"] = classees or {}
+    return regles
+
+
+def table_user(**colonnes):
+    return {"user_user": {"cle": "id", "colonnes": {
+        nom: (regle if isinstance(regle, dict) else {"action": "garder"}) for nom, regle in colonnes.items()}}}
+
+
+def anonymiser_colonne(traitement, **parametres):
+    return dict({"action": "anonymiser", "traitement": traitement}, **parametres)
+
+
+def appliquer_regles(regles):
+    sortie = StringIO()
+    appliquer(charger_regles_dict(regles), OutputWrapper(sortie))
+    return sortie.getvalue()
+
+
+def charger_regles_dict(regles):
+    fichier = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    with fichier:
+        json.dump(regles, fichier)
+    try:
+        return charger_regles(fichier.name)
+    finally:
+        os.unlink(fichier.name)
+
+
+class MoteurTests(TestCase):
+    def setUp(self):
+        self.a = UserFactory(email="a@vrai.org", username="ua", firstname="Alice", contact=221, birthday="1990-05-17")
+        self.b = UserFactory(email="b@vrai.org", username="ub", firstname="Bob", contact=222)
+        for utilisateur in (self.a, self.b):
+            utilisateur.set_password("secret-%s" % utilisateur.username)
+            utilisateur.save()
+
+    def test_texte_par_id_unicite_respectee(self):
+        regles = regles_moteur(classees=table_user(
+            id=1,
+            email=anonymiser_colonne("texte_par_id", modele="user-{id}@exemple.invalid"),
+            firstname=anonymiser_colonne("texte_par_id", modele="Prenom{id}"),
+            username=anonymiser_colonne("texte_par_id", modele="u-{id}-{id}")))
+        appliquer_regles(regles)
+        self.a.refresh_from_db()
+        self.b.refresh_from_db()
+        self.assertEqual(self.a.email, "user-%d@exemple.invalid" % self.a.id)
+        self.assertEqual(self.b.firstname, "Prenom%d" % self.b.id)
+        self.assertEqual(self.a.username, "u-%d-%d" % (self.a.id, self.a.id))
+        self.assertNotEqual(self.a.email, self.b.email)
+
+    def test_nombre_par_id(self):
+        appliquer_regles(regles_moteur(classees=table_user(
+            id=1, contact=anonymiser_colonne("nombre_par_id", base=99000000000))))
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.contact, 99000000000 + self.a.id)
+
+    def test_aleatoire_mot_de_passe_inutilisable(self):
+        appliquer_regles(regles_moteur(classees=table_user(
+            id=1, password=anonymiser_colonne("aleatoire", prefixe="!"))))
+        self.a.refresh_from_db()
+        self.b.refresh_from_db()
+        self.assertTrue(self.a.password.startswith("!"))
+        self.assertNotEqual(self.a.password, self.b.password)
+        self.assertFalse(self.a.has_usable_password())
+        self.assertFalse(self.a.check_password("secret-ua"))
+
+    def test_valeur_fixe_null_chaine_et_json(self):
+        appliquer_regles(regles_moteur(classees=table_user(
+            id=1,
+            birthday=anonymiser_colonne("valeur_fixe", valeur=None),
+            bio=anonymiser_colonne("valeur_fixe", valeur=""),
+            address=anonymiser_colonne("valeur_fixe", valeur={"a": 1}),
+            nationality=anonymiser_colonne("valeur_fixe", valeur="192.0.2.1"))))
+        self.a.refresh_from_db()
+        self.assertIsNone(self.a.birthday)
+        self.assertEqual(self.a.bio, "")
+        self.assertEqual(self.a.address, '{"a": 1}')
+        self.assertEqual(self.a.nationality, "192.0.2.1")
+
+    def test_colonne_gardee_et_lignes_inchangees(self):
+        appliquer_regles(regles_moteur(classees=table_user(
+            id=1, firstname=1, contact=anonymiser_colonne("valeur_fixe", valeur=None))))
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.firstname, "Alice")
+        self.assertEqual(User.objects.count(), 2)
+
+    def test_table_videe_et_cles_etrangeres_intactes(self):
+        Session.objects.create(session_key="k", session_data="d", expire_date="2099-01-01T00:00:00Z")
+        invitation = Invitation.objects.create(inviter=self.a, invitee_email="x@vrai.org")
+        appliquer_regles(regles_moteur(vider=["django_session"], classees=table_user(
+            id=1, email=anonymiser_colonne("texte_par_id", modele="user-{id}@exemple.invalid"))))
+        self.assertEqual(Session.objects.count(), 0)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.inviter, self.a)
+
+    def test_journal_sans_valeur_d_origine(self):
+        Session.objects.create(session_key="k", session_data="d", expire_date="2099-01-01T00:00:00Z")
+        journal = appliquer_regles(regles_moteur(vider=["django_session"], classees=table_user(
+            id=1, email=anonymiser_colonne("texte_par_id", modele="user-{id}@exemple.invalid"))))
+        self.assertEqual(journal.splitlines(), [
+            "anonymiser : django_session : 1 ligne(s) supprimée(s)",
+            "anonymiser : user_user.email : 2 ligne(s)",
+            "anonymisation terminée",
+        ])
+        self.assertNotIn("vrai.org", journal)
+
+    def test_idempotence_des_valeurs_par_identifiant(self):
+        regles = regles_moteur(classees=table_user(
+            id=1, email=anonymiser_colonne("texte_par_id", modele="user-{id}@exemple.invalid"),
+            contact=anonymiser_colonne("nombre_par_id", base=7)))
+        appliquer_regles(regles)
+        premier = list(User.objects.order_by("id").values_list("email", "contact"))
+        appliquer_regles(regles)
+        self.assertEqual(list(User.objects.order_by("id").values_list("email", "contact")), premier)
+
+    def test_violation_d_integrite_annule_tout(self):
+        Invitation.objects.create(inviter=self.a, invitee_email="x@vrai.org")
+        regles = regles_moteur(vider=["user_user"], classees={"post_tag": {"colonnes": {"id": {"action": "garder"}}}})
+        with self.assertRaises(CommandError) as ctx:
+            appliquer_regles(regles)
+        self.assertEqual(ctx.exception.returncode, 1)
+        self.assertTrue(User.objects.filter(email="a@vrai.org").exists())

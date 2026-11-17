@@ -2,6 +2,7 @@ import json
 import os
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import IntegrityError, connection, transaction
 
 REGLES_PAR_DEFAUT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                                  "regles_anonymisation.json")
@@ -77,6 +78,47 @@ def charger_regles(chemin):
     return regles
 
 
+def expression_et_parametres(regle, cle):
+    traitement = regle["traitement"]
+    if traitement == "texte_par_id":
+        morceaux = regle["modele"].split("{id}")
+        parties = ["%s::text"]
+        for _ in morceaux[1:]:
+            parties += [cle + "::text", "%s::text"]
+        return " || ".join(parties), morceaux
+    if traitement == "nombre_par_id":
+        return "%s::bigint + " + cle, [regle["base"]]
+    if traitement == "aleatoire":
+        return "%s::text || md5(random()::text || " + cle + "::text)", [regle["prefixe"]]
+    valeur = regle["valeur"]
+    if isinstance(valeur, (dict, list)):
+        valeur = json.dumps(valeur)
+    return "%s", [valeur]
+
+
+def appliquer(regles, stdout):
+    quote = connection.ops.quote_name
+    try:
+        with transaction.atomic():
+            with connection.cursor() as curseur:
+                for table in regles["tables_a_vider"]:
+                    curseur.execute("DELETE FROM " + quote(table))
+                    stdout.write("anonymiser : %s : %d ligne(s) supprimée(s)" % (table, curseur.rowcount))
+                for table, contenu in regles["tables_classees"].items():
+                    cle = quote(contenu["cle"])
+                    for colonne, regle in contenu["colonnes"].items():
+                        if regle["action"] != "anonymiser":
+                            continue
+                        expression, parametres = expression_et_parametres(regle, cle)
+                        curseur.execute("UPDATE %s SET %s = %s" % (quote(table), quote(colonne), expression),
+                                        parametres)
+                        stdout.write("anonymiser : %s.%s : %d ligne(s)" % (table, colonne, curseur.rowcount))
+                curseur.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    except IntegrityError:
+        raise CommandError("anonymisation annulée : une contrainte d'intégrité n'est pas respectée", returncode=1)
+    stdout.write("anonymisation terminée")
+
+
 class Command(BaseCommand):
     help = "Remplace les données de personnes d'une base locale et jetable par des valeurs factices"
 
@@ -85,4 +127,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         verifier_environnement()
-        charger_regles(options["regles"])
+        appliquer(charger_regles(options["regles"]), self.stdout)
