@@ -38,11 +38,11 @@ autorité ; § 2 objectif 7, § 5.1, § 5.5, § 8.3 lignes « Iso (lot 6) » et 
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : 🟡 en cours · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Secrets : nouveaux secrets, saisie masquée, clés des variables · `feature/outils-donnees-iso-secrets`
-  - [ ] Tests bats d'abord (`inventaire.bats`), vus en échec
-  - [ ] `secrets.txt`, `secrets-inventaire.txt`, `docs/v1/infra/secrets.md` (tableau des secrets)
+- [x] **Tâche 1** Secrets : nouveaux secrets, saisie masquée, clés des variables · `feature/outils-donnees-iso-secrets`
+  - [x] Tests bats d'abord (`inventaire.bats`), vus en échec
+  - [x] `secrets.txt`, `secrets-inventaire.txt`, `docs/v1/infra/secrets.md` (tableau des secrets)
 - [ ] **Tâche 2** Module du contrôle d'iso et son auto-test
   - [ ] `iso-test.rb` d'abord (échec : module absent), puis `iso.rb`
   - [ ] Écart non autorisé détecté, écarts autorisés tolérés

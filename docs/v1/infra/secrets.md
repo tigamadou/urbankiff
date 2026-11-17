@@ -21,8 +21,10 @@ Règles :
 | `SECRET_KEY` | clé Django (sessions, jetons) | `apps/api/env.prod`, `env.preprod` (versionnés) | sans effet dès qu'elle n'est plus déployée (prod arrêtée) | aléatoire, 64 caractères, script |
 | `POSTGRES_PASSWORD` | mot de passe de l'utilisateur applicatif de la base | secrets `DB_PASSWORD`, `PREPROD_DB_PASSWORD` de l'ancien dépôt | `ALTER ROLE` sur la base de B (runbook, mesures conservatoires) | généré par CloudNativePG (Secret `urbankiff-pg-app`), absent de `secrets.txt` |
 | `REDIS_PASSWORD` | mot de passe Redis (Redis n'en avait pas) | — | Redis actuel arrêté (mesures conservatoires) | aléatoire, 40 caractères, script |
-| `MINIO_ROOT_USER` | administrateur du stockage S3 | `apps/api/env.*`, `apps/minio/.env.*` (versionnés) | port public de MinIO fermé ; instance de A retirée à sa reconstruction, après export des objets | aléatoire, 20 caractères, script |
-| `MINIO_ROOT_PASSWORD` | mot de passe administrateur du stockage S3 | idem | idem | aléatoire, 40 caractères, script |
+| `MINIO_ROOT_USER` | administrateur du stockage S3 | `apps/api/env.*`, `apps/minio/.env.*` (versionnés) | port public de MinIO fermé ; instance de A retirée à sa reconstruction, après export des objets | saisie masquée (script), connu du développeur : login de la console du stockage |
+| `MINIO_ROOT_PASSWORD` | mot de passe administrateur du stockage S3 | idem | idem | saisie masquée (script), connu du développeur : mot de passe de la console du stockage |
+| `PGADMIN_EMAIL` | login de pgAdmin (outil web d'administration de la base) | — | — | saisie masquée (script) |
+| `PGADMIN_MOT_DE_PASSE` | mot de passe de pgAdmin | — | — | saisie masquée (script) |
 | `SMTP_USERNAME` | identifiant du fournisseur SMTP | `apps/api/env.*` (versionnés) | console du fournisseur SMTP : révoquer le jeton actuel | saisie masquée (script) |
 | `SMTP_PASSWORD` | jeton du fournisseur SMTP | idem | idem | saisie masquée (script) |
 | `TWILIO_ACCOUNT_SID` | compte Twilio (SMS) | `apps/api/env.*` (versionnés) | — (identifiant de compte, inchangé) | saisie masquée (script) |
