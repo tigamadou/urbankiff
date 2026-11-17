@@ -35,7 +35,7 @@ autorité). Plan de la mission `outils-donnees`, lot 3 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 5
+Statut : ⬜ à faire · Prochaine tâche : 7
 
 - [x] **Tâche 1** Valeurs, hôtes et helpers · `feature/outils-donnees-outils-web`
   - [x] sections `hosts`, `ingress`, `pgadmin`, `rustfs.console` de `values.yaml`, hôtes dans `values-preprod.yaml` et `values-prod.yaml`
@@ -43,8 +43,8 @@ Statut : ⬜ à faire · Prochaine tâche : 5
 - [x] **Tâche 2** Console RustFS sur le StatefulSet existant
 - [x] **Tâche 3** pgAdmin 4 : ConfigMap, Deployment, Service
 - [x] **Tâche 4** Middlewares Traefik, Ingress et schéma CRD pour kubeconform
-- [ ] **Tâche 5** NetworkPolicies des outils
-- [ ] **Tâche 6** Quota de la preprod et documentation
+- [x] **Tâche 5** NetworkPolicies des outils
+- [x] **Tâche 6** Quota de la preprod et documentation
 - [ ] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
