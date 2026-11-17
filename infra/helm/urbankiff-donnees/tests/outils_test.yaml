@@ -409,6 +409,37 @@ tests:
           content:
             name: PGADMIN_LISTEN_PORT
             value: "8080"
+  - it: pgAdmin garde seulement NET_BIND_SERVICE, sans escalade de privilèges
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities
+          value:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.capabilities
+          value:
+            drop:
+              - ALL
+  - it: config_distro.py écrit dans le volume de données, pas dans la racine en lecture seule
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_CUSTOM_CONFIG_DISTRO_FILE
+            value: /var/lib/pgadmin/config_distro.py
   - it: servers.json cible urbankiff-pg-rw sans mot de passe
     template: templates/pgadmin.yaml
     documentIndex: 0

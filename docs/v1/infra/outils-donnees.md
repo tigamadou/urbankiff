@@ -60,7 +60,11 @@ Mesuré avec `make helm-controle` et `make helm-rendu ENV=preprod` :
   partageraient alors un seul seau (20 req/s, rafale 50) et un chargement de pgAdmin (nombreux fichiers statiques)
   pourrait le saturer. Si c'est le cas : `externalTrafficPolicy: Local` sur le Service de Traefik, ou
   `X-Forwarded-For` avec un `depth` adapté.
-- **pgAdmin 9.9.0 en lecture seule** : l'entrypoint de l'image écrit les variables `PGADMIN_CONFIG_*` dans
-  `/pgadmin4/config_distro.py`, non monté inscriptible (seuls données, tmp, journaux et pgpass le sont). Si le démarrage
-  échoue sur ce point, prévoir un `emptyDir` ou un `config_distro.py` fourni par ConfigMap. Non vérifiable par les
-  tests de rendu (risque d'exécution 7 du plan).
+- **pgAdmin 9.9.0 en lecture seule** (constaté au premier déploiement de la preprod, 0.1.0-rc.5) :
+  - le python de l'image porte la capability fichier `cap_net_bind_service=eip` ; avec `capabilities.drop: [ALL]`,
+    `execve` échoue (« Operation not permitted ») et le pod boucle en `CrashLoopBackOff`. Le conteneur pgAdmin garde
+    donc `NET_BIND_SERVICE` (seule exception au durcissement, `allowPrivilegeEscalation` reste `false`) ;
+  - l'entrypoint écrit les variables `PGADMIN_CONFIG_*` dans `config_distro.py` : `PGADMIN_CUSTOM_CONFIG_DISTRO_FILE`
+    le place dans le volume de données (`/var/lib/pgadmin`), la racine restant en lecture seule.
+  Vérifié en local avec le même contexte de sécurité (lecture seule, UID 10001, `no-new-privileges`) : `/misc/ping`
+  répond 200.
