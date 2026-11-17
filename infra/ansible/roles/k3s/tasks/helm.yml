@@ -4,6 +4,7 @@
   register: k3s_helm_installe
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Installation de Helm {{ helm_version }}
   when: helm_version != (k3s_helm_installe.stdout | trim)
