@@ -548,7 +548,7 @@ tests:
           value: [ALL]
       - equal:
           path: spec.template.spec.containers[0].resources.requests.memory
-          value: 160Mi
+          value: 96Mi
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 320Mi

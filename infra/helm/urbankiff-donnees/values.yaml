@@ -103,7 +103,7 @@ pgadmin:
   port: 8080
   ressources:
     requests:
-      memory: 160Mi
+      memory: 96Mi
     limits:
       memory: 320Mi
 

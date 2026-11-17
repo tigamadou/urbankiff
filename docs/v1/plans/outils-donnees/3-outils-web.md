@@ -163,7 +163,7 @@ Contraintes propres au lot (spec §§ 2, 3, 5.4, 5.5, 8.3) :
   preprod.stockage.urbankiff.com`. Lancer `make helm-unittest CHART=urbankiff-donnees` : le voir échouer.
 - [ ] **Étape 2** : ajouter dans `values.yaml` (et seulement là) : `hosts: {db: "", stockage: ""}`, `ingress:` (classe,
   clusterIssuer, limiteDebit moyenne 20 / rafale 50, hsts secondes 31536000), `pgadmin:` (image épinglée
-  `dpage/pgadmin4:<version>` choisie par le constructeur, port, `ressources` requests 160Mi / limits 320Mi), et
+  `dpage/pgadmin4:<version>` choisie par le constructeur, port, `ressources` requests 96Mi / limits 320Mi), et
   `rustfs.console: {actif: true, port: 9001}` sans toucher le reste de `rustfs`. Ajouter `hosts.db` et
   `hosts.stockage` à `values-preprod.yaml` et `values-prod.yaml` (seul écart autorisé, avec `pgadmin.ressources` si besoin).
 - [ ] **Étape 3** : ajouter `urbankiff.origineTraefik` à `_helpers.tpl` (copie de celui du chart `urbankiff`).
