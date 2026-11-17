@@ -25,8 +25,8 @@ Sur l'hôte : `docker`, `make`, `git`, `gh` seulement. La cible `init`
 
 ## isolation
 
-- Ressources isolées par lot : base Postgres `urbankiff_<lot>` (base de test `test_urbankiff_<lot>` créée par
-  Django), numéros de base Redis propres au lot, bucket RustFS `urbankiff-<lot>`, port hôte par lot. Mailhog est
+- Ressources isolées par lot : base Postgres `urbankiff_<lot>` (tirets du lot remplacés par `_`, ex. `urbankiff_outils_web` ; base de test
+  `test_urbankiff_<lot>`, ex. `test_urbankiff_outils_web`, créée par Django), numéros de base Redis propres au lot, bucket RustFS `urbankiff-<lot>`, port hôte par lot. Mailhog est
   partagé : le lanceur de tests Django envoie les emails dans une boîte en mémoire.
 - Garde-fou : `apps/api/project/test_runner.py`
 

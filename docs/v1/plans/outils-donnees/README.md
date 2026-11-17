@@ -32,4 +32,13 @@ Statuts : ⬜ à faire · 🟡 en cours · 🔵 en revue · ✅ fusionné.
   ou export.
 - Poser les nouveaux secrets (`PGADMIN_*`, `MINIO_ROOT_*` en saisie, Twilio de la prod en preprod), créer les
   enregistrements DNS `preprod.db`, `preprod.stockage`, `db`, `stockage`.
-- Rétablir l'égalité stricte de l'inventaire des secrets (B8), puis vérifier les critères « réels » du § 7.
+- Vérifier les critères « réels » du § 7 (l'égalité stricte de l'inventaire des secrets, B8, est rétablie : #69).
+
+## Correctifs fusionnés
+
+- #66 : typo ansible.
+- #68 : auto-test du quota.
+- #69 : inventaire strict des secrets (B8).
+- #71 : export sans `PGADMIN_*`.
+- #72 : job CI infra.
+- c6cc0f3 : outillage (tiret de lot et `secrets-scan` en worktree).
