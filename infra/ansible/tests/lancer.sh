@@ -77,6 +77,17 @@ if ansible -e ansible_user=testadmin -e deploiement_script_requis=true -e deploi
 fi
 echo "ok   échec franc quand le script manque"
 
+echo "== Bucket de la copie invalide : échec attendu"
+for invalide in "" "Mauvais_Nom"; do
+    if ansible -e ansible_user=testadmin -e "bucket_copie_preprod=$invalide" \
+        --tags bucket_copie tests/site-test.yml > "$travail/bucket.log" 2>&1 || ! grep -q "bucket_copie_preprod" "$travail/bucket.log"; then
+        cat "$travail/bucket.log"
+        echo "Le rôle aurait dû échouer avec le message bucket_copie_preprod pour '$invalide'" >&2
+        exit 1
+    fi
+done
+echo "ok   échec franc quand le bucket de la copie est invalide"
+
 echo "== Vérifications"
 ansible -e ansible_user=testadmin tests/verifier.yml
 echo "Tous les contrôles passent."

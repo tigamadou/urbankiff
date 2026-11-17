@@ -21,8 +21,10 @@ Règles :
 | `SECRET_KEY` | clé Django (sessions, jetons) | `apps/api/env.prod`, `env.preprod` (versionnés) | sans effet dès qu'elle n'est plus déployée (prod arrêtée) | aléatoire, 64 caractères, script |
 | `POSTGRES_PASSWORD` | mot de passe de l'utilisateur applicatif de la base | secrets `DB_PASSWORD`, `PREPROD_DB_PASSWORD` de l'ancien dépôt | `ALTER ROLE` sur la base de B (runbook, mesures conservatoires) | généré par CloudNativePG (Secret `urbankiff-pg-app`), absent de `secrets.txt` |
 | `REDIS_PASSWORD` | mot de passe Redis (Redis n'en avait pas) | — | Redis actuel arrêté (mesures conservatoires) | aléatoire, 40 caractères, script |
-| `MINIO_ROOT_USER` | administrateur du stockage S3 | `apps/api/env.*`, `apps/minio/.env.*` (versionnés) | port public de MinIO fermé ; instance de A retirée à sa reconstruction, après export des objets | aléatoire, 20 caractères, script |
-| `MINIO_ROOT_PASSWORD` | mot de passe administrateur du stockage S3 | idem | idem | aléatoire, 40 caractères, script |
+| `MINIO_ROOT_USER` | administrateur du stockage S3 | `apps/api/env.*`, `apps/minio/.env.*` (versionnés) | port public de MinIO fermé ; instance de A retirée à sa reconstruction, après export des objets | saisie masquée (script), connu du développeur : login de la console du stockage |
+| `MINIO_ROOT_PASSWORD` | mot de passe administrateur du stockage S3 | idem | idem | saisie masquée (script), connu du développeur : mot de passe de la console du stockage |
+| `PGADMIN_EMAIL` | login de pgAdmin (outil web d'administration de la base) | — | — | saisie masquée (script) |
+| `PGADMIN_MOT_DE_PASSE` | mot de passe de pgAdmin | — | — | saisie masquée (script) |
 | `SMTP_USERNAME` | identifiant du fournisseur SMTP | `apps/api/env.*` (versionnés) | console du fournisseur SMTP : révoquer le jeton actuel | saisie masquée (script) |
 | `SMTP_PASSWORD` | jeton du fournisseur SMTP | idem | idem | saisie masquée (script) |
 | `TWILIO_ACCOUNT_SID` | compte Twilio (SMS) | `apps/api/env.*` (versionnés) | — (identifiant de compte, inchangé) | saisie masquée (script) |
@@ -82,8 +84,12 @@ Posés à la main par le développeur dans chaque environnement GitHub à la mis
 | `DEPLOY_HOST` | variable | nom d'hôte ou adresse du serveur du déploiement |
 | `DEPLOY_KNOWN_HOSTS` | variable | empreinte du serveur (`known_hosts`) pour la connexion SSH de la CI |
 
-Les valeurs Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`) de `preprod` restent factices : avec `sms.actif` faux le
-chart les remplace par des valeurs inertes.
+La preprod utilise le même compte Twilio que la prod : `TWILIO_ACCOUNT_SID` et `TWILIO_AUTH_TOKEN` de `preprod` reçoivent
+les valeurs de la prod (saisie masquée) ; la preprod envoie de vrais SMS.
+
+`MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD` sont des secrets saisis (masqués) et connus du développeur, qui s'en sert pour
+la console du stockage. Changer la valeur d'un environnement déjà en service demande de redémarrer RustFS.
+`PGADMIN_EMAIL` et `PGADMIN_MOT_DE_PASSE` donnent l'accès à pgAdmin.
 
 ## Anciens secrets et configurations retirés
 

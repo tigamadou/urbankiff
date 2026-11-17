@@ -168,14 +168,14 @@ suivantes sont posées par le chart et l'emportent sur `envFrom` :
 | `REDIS_PASSWORD` | clé `REDIS_PASSWORD` de `urbankiff-secrets` |
 | `REDIS_ENDPOINT` | construite : `redis://:$(REDIS_PASSWORD)@urbankiff-redis:6379/0` (déclarée après `REDIS_PASSWORD`) |
 | `MINIO_ENDPOINT` | construite : `urbankiff-rustfs:9000` (A4) |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | `sms.actif: true` : clés du Secret ; sinon valeur inerte `desactive` (A6) |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | clés du Secret (`sms.actif: true` en prod et en preprod) ; valeur inerte `desactive` seulement si `sms.actif` est faux (A6) |
 
 Autres lectures de `urbankiff-secrets` : `MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD` (RustFS, rclone), `REDIS_PASSWORD`
 (Redis), `WASABI_ACCESS_KEY_ID` et `WASABI_SECRET_ACCESS_KEY` (Barman Cloud, rclone). De `urbankiff-config` :
 `MINIO_DEFAULT_BUCKETS` (nom du bucket, Job de création et copies rclone). `POSTGRES_PASSWORD` n'est **pas** lu dans
 `urbankiff-secrets` (A3).
 
-`sms.actif: false` (preprod) ne neutralise que la variable d'environnement : le code de l'api n'est pas modifié.
+`sms.actif: false` (aucun environnement ne l'utilise) ne neutraliserait que la variable d'environnement : le code de l'api n'est pas modifié.
 
 ## Hibernation de la preprod
 
@@ -289,6 +289,26 @@ Toutes les cibles lancent des conteneurs aux versions épinglées (`make/helm.mk
 
 Les cibles de rendu passent des valeurs de test (`ETIQUETTE`, `WASABI_REGION`, `WASABI_BUCKET`, sans secret) ; les
 valeurs réelles viennent du script de déploiement.
+
+## Iso preprod / prod
+
+La preprod est iso à la prod : mêmes valeurs, mêmes secrets, seule la taille (mémoire) et les noms d'hôtes changent
+(spec § 5.1).
+
+- **Écarts autorisés**, exactement : `environnement`, `hosts.*` (dont `hosts.db` et `hosts.stockage` du chart des
+  données) et toute clé sous un segment `ressources` (`*.ressources.*`). Tout autre écart entre `values-prod.yaml` et
+  `values-preprod.yaml`, clé présente d'un seul côté comprise, fait échouer le contrôle.
+- **Où vit le contrôle** : `infra/helm/tests-transverses/controle.rb` et `iso.rb` (liste des écarts autorisés en un seul
+  endroit), auto-test `iso-test.rb` ; lancé par `make helm-test` et `make helm-controle`. Les deux charts
+  (`urbankiff` et `urbankiff-donnees`) sont comparés ; un chart oublié ou un fichier de valeurs absent ou illisible
+  fait échouer.
+- **Rendre le contrôle vert** : aligner la valeur de la preprod sur celle de la prod. Ajouter un écart autorisé demande
+  de modifier le contrat de la spec puis `iso.rb`, jamais d'assouplir le test.
+- **SMS** : `sms.actif: true` dans les deux environnements ; la preprod utilise le compte Twilio de la prod et envoie de
+  vrais SMS. Le contrôle exige les références `secretKeyRef` en prod et en preprod et refuse toute valeur inerte.
+- **Variables** : les ensembles de clés de `variables-prod.txt` et `variables-preprod.txt` sont égaux (`make secrets-test`).
+- **Mémoire et quota** : non alignés sur la prod (décision du développeur). Le quota de la preprod est contrôlé en
+  limites (3 072 Mi) et en requêtes (1 536 Mi) avec le même calcul.
 
 ## Points laissés aux lots voisins
 

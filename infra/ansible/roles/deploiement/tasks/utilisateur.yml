@@ -23,6 +23,15 @@
     group: root
     mode: "0755"
 
+- name: Nom du bucket de la copie preprod valide
+  ansible.builtin.assert:
+    that:
+      - bucket_copie_preprod is defined
+      - bucket_copie_preprod is match('^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$')
+    fail_msg: "bucket_copie_preprod : nom de bucket S3 valide requis (3 à 63 caractères, minuscules, chiffres, tirets, points)"
+    quiet: true
+  tags: [bucket_copie]
+
 - name: Configuration de urbankiff-deploy par environnement
   ansible.builtin.template:
     src: deploy.env.j2

@@ -8,4 +8,5 @@ case "$*" in
   *--password-stdin*) lire_entree ;;
   "run --rm -i"*) lire_entree ;;
   "buildx imagetools inspect"*) [ -z "${FAKE_IMAGE_ABSENTE:-}" ] || { echo "not found" >&2; exit 1; } ;;
+  *" size --json "*) printf '{"count":1,"bytes":%s}\n' "${FAKE_RCLONE_OCTETS:-0}" ;;
 esac

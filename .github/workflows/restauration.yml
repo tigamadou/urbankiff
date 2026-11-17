@@ -1,0 +1,57 @@
+name: Restauration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environnement:
+        description: "Environnement à restaurer (prod : approbation de l'environnement requise)"
+        type: choice
+        required: true
+        options: [preprod, prod]
+      prefixe:
+        description: "Préfixe du dépôt Wasabi, ex. restauration/2026-11-17/ ou restauration/2026-11-17-prod-anonyme/ (preprod seulement)"
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  restaurer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.environnement }}
+    concurrency:
+      group: deploiement-${{ inputs.environnement }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Préparer SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+      - name: Restaurer
+        env:
+          PREFIXE: ${{ inputs.prefixe }}
+          ENVIRONNEMENT: ${{ inputs.environnement }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          [[ "$ENVIRONNEMENT" =~ ^(prod|preprod)$ ]] || { echo "environnement attendu : prod ou preprod" >&2; exit 1; }
+          [[ "$PREFIXE" =~ ^restauration/[0-9]{4}-[0-9]{2}-[0-9]{2}(-prod-anonyme)?/$ ]] || { echo "préfixe invalide" >&2; exit 1; }
+          if [ "$ENVIRONNEMENT" = prod ] && [[ "$PREFIXE" == *-prod-anonyme/ ]]; then
+            echo "un export anonymisé ne se charge jamais en prod" >&2; exit 1
+          fi
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "variable DEPLOY_HOST absente ou invalide" >&2; exit 1; }
+          ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$RUNNER_TEMP/known_hosts" "deploy@$DEPLOY_HOST" restaurer "$PREFIXE" < /dev/null
+      - name: Nettoyage
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"

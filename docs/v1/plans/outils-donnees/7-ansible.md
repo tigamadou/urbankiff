@@ -1,7 +1,7 @@
 # Ansible (configuration du serveur) — Plan d'implémentation
 
 > **Pour les agents d'exécution** : exécuter tâche par tâche, tests d'abord. Les étapes utilisent la syntaxe à cases
-> `- [ ]`.
+> `- [x]`.
 
 **Objectif** : le serveur A reçoit, par rejeu du playbook, ce dont les lots 3 et 5 ont besoin : `deploy.prod.env` porte
 la clé `BUCKET_COPIE_PREPROD` (bucket Wasabi de la preprod, lu par l'action `exporter-anonyme` de `urbankiff-deploy`),
@@ -38,21 +38,21 @@ autorité ; voir aussi § 5.6 et § 5.7). Plan de la mission `outils-donnees`, l
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
-- [ ] **Tâche 1** Tests d'abord : contrôles statiques, vérifications sur conteneur, test d'échec (rouges) · `feature/outils-donnees-ansible`
-  - [ ] `tests/controles.sh` : règle `middlewares`, absence de `pods/exec`, variable de bucket, cohérence avec la preprod
-  - [ ] `tests/verifier.yml` : `BUCKET_COPIE_PREPROD` dans `deploy.prod.env` seulement
-  - [ ] `tests/lancer.sh` : échec franc sur un bucket vide ou invalide
-  - [ ] `make infra-lint` et `make infra-test` rouges pour la bonne raison
-- [ ] **Tâche 2** Variable, gabarit, assertion et règle du Role · `feature/outils-donnees-ansible`
-  - [ ] `group_vars/all.yml`, `roles/deploiement/templates/deploy.env.j2`, tâche d'assertion
-  - [ ] `roles/deploiement/defaults/main.yml` : règle `traefik.io` `middlewares`
-  - [ ] `make infra-lint`, `make infra-test`, `make infra-test-assert` verts (deux passages, zéro changement au second)
-- [ ] **Tâche 3** Inventaire d'exemple et documentation du serveur · `feature/outils-donnees-ansible`
-  - [ ] `inventory.example.yml` : variable commentée
-  - [ ] `docs/v1/infra/serveur.md` : nouveaux éléments et rejeu par le développeur après la PR finale
-- [ ] **Tâche 4** Vérification du lot
+- [x] **Tâche 1** Tests d'abord : contrôles statiques, vérifications sur conteneur, test d'échec (rouges) · `feature/outils-donnees-ansible`
+  - [x] `tests/controles.sh` : règle `middlewares`, absence de `pods/exec`, variable de bucket, cohérence avec la preprod
+  - [x] `tests/verifier.yml` : `BUCKET_COPIE_PREPROD` dans `deploy.prod.env` seulement
+  - [x] `tests/lancer.sh` : échec franc sur un bucket vide ou invalide
+  - [x] `make infra-lint` et `make infra-test` rouges pour la bonne raison
+- [x] **Tâche 2** Variable, gabarit, assertion et règle du Role · `feature/outils-donnees-ansible`
+  - [x] `group_vars/all.yml`, `roles/deploiement/templates/deploy.env.j2`, tâche d'assertion
+  - [x] `roles/deploiement/defaults/main.yml` : règle `traefik.io` `middlewares`
+  - [x] `make infra-lint`, `make infra-test`, `make infra-test-assert` verts (deux passages, zéro changement au second)
+- [x] **Tâche 3** Inventaire d'exemple et documentation du serveur · `feature/outils-donnees-ansible`
+  - [x] `inventory.example.yml` : variable commentée
+  - [x] `docs/v1/infra/serveur.md` : nouveaux éléments et rejeu par le développeur après la PR finale
+- [x] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
 

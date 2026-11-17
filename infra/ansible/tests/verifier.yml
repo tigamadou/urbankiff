@@ -141,6 +141,16 @@
       loop_control:
         label: "{{ item.item }}"
 
+    - name: BUCKET_COPIE_PREPROD dans deploy.prod.env seulement
+      ansible.builtin.assert:
+        that:
+          - (item.item == 'prod') == ((item.content | b64decode) is search('(?m)^BUCKET_COPIE_PREPROD=' ~ bucket_copie_preprod ~ '$'))
+          - (item.item == 'prod') or ((item.content | b64decode) is not search('BUCKET_COPIE_PREPROD'))
+        quiet: true
+      loop: "{{ deploy_envs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
     - name: Script de déploiement, s'il est installé, en 0755 root
       ansible.builtin.stat:
         path: /usr/local/bin/urbankiff-deploy

@@ -36,33 +36,33 @@ autorité). Plan de la mission `outils-donnees`, lot 2 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
-- [ ] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
-  - [ ] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
-  - [ ] Commande `anonymiser` (garde-fou, option `--regles`, chargement et validation du format des règles)
-  - [ ] Tests verts
-- [ ] **Tâche 2** Moteur d'application des traitements
-  - [ ] Tests (chaque traitement, vidage de table, journal, idempotence, intégrité) écrits et vus en échec
-  - [ ] Moteur SQL en une transaction
-  - [ ] Tests verts
-- [ ] **Tâche 3** Garde-fou de classement
-  - [ ] Tests (colonne non classée, table inconnue, colonne suspecte, vraie table temporaire) écrits et vus en échec
-  - [ ] `verifier_classement` branché au début de la commande
-  - [ ] Tests verts
-- [ ] **Tâche 4** Inventaire et fichier de règles complet
-  - [ ] Test « le vrai schéma est entièrement classé » vu en échec
-  - [ ] `regles_anonymisation.json` : toutes les tables et colonnes de personnes
-  - [ ] Tests verts
-- [ ] **Tâche 5** Aucune valeur d'origine ne subsiste, compatibilité `prodseed`
-  - [ ] Tests de bout en bout (jeu de données de sentinelles, balayage de toute la base) écrits
-  - [ ] Corrections de règles si une valeur subsiste
-  - [ ] Tests verts
-- [ ] **Tâche 6** Commande `lister_fichiers_publics` (arbitrage B1)
-  - [ ] Tests (garde-fou, clés citées, dédoublonnage, exclusion avatar et pièces d'identité) écrits et vus en échec
-  - [ ] Commande `lister_fichiers_publics`
-  - [ ] Tests verts
-- [ ] **Tâche 7** Vérification du lot
+- [x] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
+  - [x] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
+  - [x] Commande `anonymiser` (garde-fou, option `--regles`, chargement et validation du format des règles)
+  - [x] Tests verts
+- [x] **Tâche 2** Moteur d'application des traitements
+  - [x] Tests (chaque traitement, vidage de table, journal, idempotence, intégrité) écrits et vus en échec
+  - [x] Moteur SQL en une transaction
+  - [x] Tests verts
+- [x] **Tâche 3** Garde-fou de classement
+  - [x] Tests (colonne non classée, table inconnue, colonne suspecte, vraie table temporaire) écrits et vus en échec
+  - [x] `verifier_classement` branché au début de la commande
+  - [x] Tests verts
+- [x] **Tâche 4** Inventaire et fichier de règles complet
+  - [x] Test « le vrai schéma est entièrement classé » vu en échec
+  - [x] `regles_anonymisation.json` : toutes les tables et colonnes de personnes
+  - [x] Tests verts
+- [x] **Tâche 5** Aucune valeur d'origine ne subsiste, compatibilité `prodseed`
+  - [x] Tests de bout en bout (jeu de données de sentinelles, balayage de toute la base) écrits
+  - [x] Corrections de règles si une valeur subsiste
+  - [x] Tests verts
+- [x] **Tâche 6** Commande `lister_fichiers_publics` (arbitrage B1)
+  - [x] Tests (garde-fou, clés citées, dédoublonnage, exclusion avatar et pièces d'identité) écrits et vus en échec
+  - [x] Commande `lister_fichiers_publics`
+  - [x] Tests verts
+- [x] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
 
