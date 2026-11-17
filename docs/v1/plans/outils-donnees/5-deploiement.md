@@ -29,7 +29,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Exécution
 
-- **Mission** : `outils-donnees` · **Issue** : à renseigner par le superviseur
+- **Mission** : `outils-donnees` · **Issue** : #49
 - **Branche** : `feature/outils-donnees-deploiement` · **Base** : `feature/outils-donnees` · **Profil** : `api`
 - **Dépendances** : aucune (contrats du § 8.3 de la spec, testés avec des faux).
 - Toutes les commandes `make` se lancent dans le worktree du lot.
@@ -40,7 +40,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 11
+Statut : ✅ terminé · Prochaine tâche : aucune
 
 - [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
   - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
@@ -68,7 +68,7 @@ Statut : 🟡 en cours · Prochaine tâche : 11
   - [x] implémentation
 - [x] **Tâche 9** Documentation `docs/v1/infra/deploiement.md`
 - [x] **Tâche 10** Réécriture de `docs/v1/infra/premier-deploiement-prod.md`
-- [ ] **Tâche 11** Vérification du lot
+- [x] **Tâche 11** Vérification du lot
 
 > Reprise : (vide)
 
