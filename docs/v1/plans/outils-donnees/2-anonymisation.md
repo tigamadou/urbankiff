@@ -36,7 +36,7 @@ autorité). Plan de la mission `outils-donnees`, lot 2 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 6
+Statut : 🟡 en cours · Prochaine tâche : 7
 
 - [x] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
   - [x] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
@@ -58,10 +58,10 @@ Statut : 🟡 en cours · Prochaine tâche : 6
   - [x] Tests de bout en bout (jeu de données de sentinelles, balayage de toute la base) écrits
   - [x] Corrections de règles si une valeur subsiste
   - [x] Tests verts
-- [ ] **Tâche 6** Commande `lister_fichiers_publics` (arbitrage B1)
-  - [ ] Tests (garde-fou, clés citées, dédoublonnage, exclusion avatar et pièces d'identité) écrits et vus en échec
-  - [ ] Commande `lister_fichiers_publics`
-  - [ ] Tests verts
+- [x] **Tâche 6** Commande `lister_fichiers_publics` (arbitrage B1)
+  - [x] Tests (garde-fou, clés citées, dédoublonnage, exclusion avatar et pièces d'identité) écrits et vus en échec
+  - [x] Commande `lister_fichiers_publics`
+  - [x] Tests verts
 - [ ] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
