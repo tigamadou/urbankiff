@@ -5,6 +5,7 @@ from io import StringIO
 from unittest import mock
 
 from django.contrib.sessions.models import Session
+from django.apps import apps as registre_apps
 from django.core.management import call_command
 from django.db import connection
 from django.core.management.base import CommandError, OutputWrapper
@@ -405,3 +406,21 @@ class ClassementReelTests(TestCase):
         self.assertIn("zz_nouvelle", str(ctx.exception))
         utilisateur.refresh_from_db()
         self.assertEqual(utilisateur.email, "origine@exemple.org")
+
+
+class ReglesLivreesTests(TestCase):
+    def test_le_vrai_schema_est_entierement_classe(self):
+        regles = charger_regles(REGLES_PAR_DEFAUT)
+        self.assertEqual(verifier_classement(regles, lire_schema(connection)), [])
+
+    def test_tables_des_applications_locales_classees(self):
+        regles = charger_regles(REGLES_PAR_DEFAUT)
+        classees = set(regles["tables_a_vider"]) | set(regles["tables_classees"]) | set(
+            regles["sans_donnees_personnelles"])
+        locales = {modele._meta.db_table for modele in registre_apps.get_models(include_auto_created=True)
+                   if modele._meta.app_label in {"file", "mail", "user", "workers", "category", "menu", "post",
+                                                 "page", "error", "comment", "twilio", "like", "scrapper", "banner"}}
+        self.assertEqual(locales - classees, set())
+        schema = lire_schema(connection)
+        for table in set(regles["tables_a_vider"]) | set(regles["tables_classees"]):
+            self.assertIn(table, schema)

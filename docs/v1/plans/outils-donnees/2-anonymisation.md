@@ -36,7 +36,7 @@ autorité). Plan de la mission `outils-donnees`, lot 2 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : 🟡 en cours · Prochaine tâche : 5
 
 - [x] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
   - [x] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
@@ -50,10 +50,10 @@ Statut : 🟡 en cours · Prochaine tâche : 4
   - [x] Tests (colonne non classée, table inconnue, colonne suspecte, vraie table temporaire) écrits et vus en échec
   - [x] `verifier_classement` branché au début de la commande
   - [x] Tests verts
-- [ ] **Tâche 4** Inventaire et fichier de règles complet
-  - [ ] Test « le vrai schéma est entièrement classé » vu en échec
-  - [ ] `regles_anonymisation.json` : toutes les tables et colonnes de personnes
-  - [ ] Tests verts
+- [x] **Tâche 4** Inventaire et fichier de règles complet
+  - [x] Test « le vrai schéma est entièrement classé » vu en échec
+  - [x] `regles_anonymisation.json` : toutes les tables et colonnes de personnes
+  - [x] Tests verts
 - [ ] **Tâche 5** Aucune valeur d'origine ne subsiste, compatibilité `prodseed`
   - [ ] Tests de bout en bout (jeu de données de sentinelles, balayage de toute la base) écrits
   - [ ] Corrections de règles si une valeur subsiste
