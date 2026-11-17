@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Point d'entrée unique du compte `deploy` (commande forcée SSH) : docs/v1/infra/deploiement.md.
 #
-#   urbankiff-deploy <prod|preprod>      avec SSH_ORIGINAL_COMMAND = deploy <version> | preprod-arret | preprod-demarrage
+#   urbankiff-deploy <prod|preprod>      avec SSH_ORIGINAL_COMMAND = deploy <version> | restaurer <prefixe> | exporter-anonyme <date> |
+#                                        preprod-arret | preprod-demarrage
 #
 # L'environnement vient du premier argument, fixé par authorized_keys : le client ne peut pas le choisir. Le script ne
 # lit rien de l'environnement SSH (le compte est en `restrict`), sauf les variables URBANKIFF_* des tests.
@@ -37,10 +38,16 @@ analyser_commande() {
   if [[ "$commande" =~ ^deploy\ v?($semver)$ ]]; then
     COMMANDE=deploy
     VERSION="${BASH_REMATCH[1]}"
+  elif [[ "$commande" =~ ^restaurer\ (restauration/[0-9]{4}-[0-9]{2}-[0-9]{2}(-prod-anonyme)?/)$ ]]; then
+    COMMANDE=restaurer
+    PREFIXE="${BASH_REMATCH[1]}"
+  elif [[ "$commande" =~ ^exporter-anonyme\ ([0-9]{4}-[0-9]{2}-[0-9]{2})$ ]]; then
+    COMMANDE=exporter-anonyme
+    DATE_EXPORT="${BASH_REMATCH[1]}"
   elif [ "$commande" = preprod-arret ] || [ "$commande" = preprod-demarrage ]; then
     COMMANDE="$commande"
   else
-    refuser "attendu : deploy <version>, preprod-arret ou preprod-demarrage"
+    refuser "attendu : deploy <version>, restaurer <prefixe>, exporter-anonyme <date>, preprod-arret ou preprod-demarrage"
   fi
 }
 
@@ -48,7 +55,7 @@ lire_configuration() {
   case "$1" in prod|preprod) ENV="$1" ;; *) die "environnement attendu en premier argument : prod ou preprod" ;; esac
   local fichier="$CONFIG_DIR/deploy.$ENV.env" ligne cle valeur
   [ -f "$fichier" ] || die "configuration introuvable : $fichier"
-  local URBANKIFF_ENV="" GHCR_OWNER="" NAMESPACE_LU="" API_CIDR_LU=""
+  local URBANKIFF_ENV="" GHCR_OWNER="" NAMESPACE_LU="" API_CIDR_LU="" BUCKET_LU="" BUCKET_PRESENT=0
   while IFS= read -r ligne || [ -n "$ligne" ]; do
     [ -n "$ligne" ] && [ "${ligne#\#}" = "$ligne" ] || continue
     [[ "$ligne" =~ ^([A-Z_]+)=(.*)$ ]] || die "configuration : ligne mal formée"
@@ -58,6 +65,7 @@ lire_configuration() {
       GHCR_OWNER) GHCR_OWNER="$valeur" ;;
       NAMESPACE) NAMESPACE_LU="$valeur" ;;
       API_SERVER_CIDR) API_CIDR_LU="$valeur" ;;
+      BUCKET_COPIE_PREPROD) [ "$1" = prod ] || die "configuration : clé inconnue $cle"; BUCKET_LU="$valeur"; BUCKET_PRESENT=1 ;;
       *) die "configuration : clé inconnue $cle" ;;
     esac
   done < "$fichier"
@@ -69,6 +77,10 @@ lire_configuration() {
   [[ "$GHCR_OWNER" =~ ^[A-Za-z0-9-]+$ ]] || die "configuration : GHCR_OWNER invalide"
   [[ "$NAMESPACE_LU" =~ ^[a-z0-9-]+$ ]] || die "configuration : NAMESPACE invalide"
   [[ "$API_CIDR_LU" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}/32$ ]] || die "configuration : API_SERVER_CIDR invalide (attendu : IPv4 en /32)"
+  if [ "$BUCKET_PRESENT" = 1 ]; then
+    [[ "$BUCKET_LU" =~ ^[A-Za-z0-9.-]+$ ]] || die "configuration : BUCKET_COPIE_PREPROD invalide"
+  fi
+  BUCKET_COPIE_PREPROD="$BUCKET_LU"
   OWNER="$GHCR_OWNER"
   NAMESPACE="$NAMESPACE_LU"
   API_SERVER_CIDR="$API_CIDR_LU"
@@ -268,6 +280,9 @@ cmd_preprod_demarrage() {
   log "preprod démarrée"
 }
 
+cmd_restaurer() { log "restauration de $PREFIXE"; }
+cmd_exporter_anonyme() { log "export anonymisé du $DATE_EXPORT"; }
+
 main() {
   analyser_commande
   lire_configuration "${1:-}"
@@ -275,6 +290,11 @@ main() {
     deploy)
       case "$VERSION" in *-*) [ "$ENV" = preprod ] || refuser "pré-release interdite en prod" ;; esac ;;
     preprod-*) [ "$ENV" = preprod ] || refuser "$COMMANDE n'existe qu'en preprod" ;;
+    restaurer)
+      case "$PREFIXE" in *-prod-anonyme/) [ "$ENV" = preprod ] || refuser "restauration d'un export anonymisé interdite en prod" ;; esac ;;
+    exporter-anonyme)
+      [ "$ENV" = prod ] || refuser "exporter-anonyme n'existe qu'en prod"
+      [ -n "$BUCKET_COPIE_PREPROD" ] || die "configuration : BUCKET_COPIE_PREPROD absent" ;;
   esac
   verrouiller
   trap nettoyer EXIT
@@ -284,6 +304,8 @@ main() {
     deploy) cmd_deploy ;;
     preprod-arret) cmd_preprod_arret ;;
     preprod-demarrage) cmd_preprod_demarrage ;;
+    restaurer) cmd_restaurer ;;
+    exporter-anonyme) cmd_exporter_anonyme ;;
   esac
 }
 
