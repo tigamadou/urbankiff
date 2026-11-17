@@ -17,11 +17,16 @@ case "$1" in
       configmap) [ -f "$FAKE_STATE/config.txt" ] || { echo "NotFound" >&2; exit 1; }; cat "$FAKE_STATE/config.txt" ;;
       ingress) printf '%s' "${FAKE_HOTE-api.test.example}" ;;
       deployment|statefulset) [ ! -f "$FAKE_STATE/$2.txt" ] || cat "$FAKE_STATE/$2.txt" ;;
+      job) cat "$FAKE_STATE/job-$3.txt" 2>/dev/null || printf '/' ;;
       cluster.postgresql.cnpg.io/*) [ ! -f "$FAKE_STATE/hibernation.txt" ] || cat "$FAKE_STATE/hibernation.txt" ;;
       *) echo "faux kubectl : get inattendu : $*" >&2; exit 1 ;;
     esac ;;
   create) journaliser_entree create; echo "fake-yaml" ;;
   apply) journaliser_entree apply ;;
-  wait) [ -z "${FAKE_WAIT_ECHEC:-}" ] || { echo "timeout" >&2; exit 1; } ;;
+  wait)
+    if [ -n "${FAKE_WAIT_ECHEC:-}" ] && { [ -z "${FAKE_WAIT_ECHEC_SUR:-}" ] || [[ "$*" == *"$FAKE_WAIT_ECHEC_SUR"* ]]; }; then
+      echo "timeout" >&2; exit 1
+    fi ;;
+  logs) cat "$FAKE_STATE/logs-${2#job/}.txt" 2>/dev/null || true ;;
   *) ;;
 esac

@@ -40,11 +40,11 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : 🟡 en cours · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
-  - [ ] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
-  - [ ] implémentation : `SECRET_KEYS`, faux étendus
+- [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
+  - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
+  - [x] implémentation : `SECRET_KEYS`, faux étendus
 - [ ] **Tâche 2** Script : analyse des commandes `restaurer` et `exporter-anonyme`, clé `BUCKET_COPIE_PREPROD`
   - [ ] bats : motifs, refus, verrou, configuration
   - [ ] implémentation

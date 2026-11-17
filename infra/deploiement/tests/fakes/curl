@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Faux curl : échoue FAKE_CURL_ECHECS fois (ou toujours si -1) puis réussit.
+# Faux curl : échoue FAKE_CURL_ECHECS fois (ou toujours si -1) puis réussit ; échoue aussi si FAKE_CURL_ECHEC_SUR est
+# contenu dans les arguments. Avec `-K -`, journalise seulement la longueur de l'entrée standard.
 set -euo pipefail
 : "${FAKE_LOG:?}" "${FAKE_STATE:?}"
 echo "curl $*" >> "$FAKE_LOG"
+if [[ " $* " == *" -K - "* ]]; then
+  contenu="$(cat; printf x)"; contenu="${contenu%x}"
+  echo "STDIN curl ${#contenu}" >> "$FAKE_LOG"
+fi
+[ -z "${FAKE_CURL_ECHEC_SUR:-}" ] || [[ "$*" != *"$FAKE_CURL_ECHEC_SUR"* ]] || exit 22
 n="$(cat "$FAKE_STATE/curl.n" 2>/dev/null || echo 0)"
 echo $((n + 1)) > "$FAKE_STATE/curl.n"
 echecs="${FAKE_CURL_ECHECS:-0}"
