@@ -17,6 +17,10 @@ deploiement_envs:
   preprod:
     namespace: preprod
 
+# Bucket Wasabi de la preprod : nom non secret, reçu par le Job d'export anonymisé de la prod (deploy.prod.env).
+# Doit égaler WASABI_BUCKET de scripts/secrets/variables-preprod.txt (vérifié par tests/controles.sh) ; surchargeable dans inventory.yml.
+bucket_copie_preprod: urbankiff-preprod
+
 # Ports du cluster ouverts seulement entre les IP des nœuds
 ports_cluster:
   - { port: "6443", proto: tcp }
