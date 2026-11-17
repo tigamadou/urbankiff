@@ -21,6 +21,7 @@ jobs:
       contents: read
     outputs:
       api: ${{ steps.filtre.outputs.api }}
+      infra: ${{ steps.filtre.outputs.infra }}
       nextjs: ${{ steps.filtre.outputs.nextjs }}
       panel: ${{ steps.filtre.outputs.panel }}
     steps:
@@ -40,6 +41,11 @@ jobs:
               echo "$app=false" >> "$GITHUB_OUTPUT"
             fi
           done
+          if [ -z "$BASE" ] || git diff --name-only "$BASE"...HEAD | grep -qE '^(infra/|scripts/secrets/|make/|Makefile|\.github/workflows/devteam-ci\.yml)'; then
+            echo "infra=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "infra=false" >> "$GITHUB_OUTPUT"
+          fi
 
   api:
     needs: changes
@@ -95,9 +101,25 @@ jobs:
       - if: ${{ !cancelled() }}
         run: make test-cible T=apps/panel/src
 
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: make deploiement-test
+      - if: ${{ !cancelled() }}
+        run: make secrets-test
+      - if: ${{ !cancelled() }}
+        run: make helm-controle
+
   ci-ok:
     if: always()
-    needs: [changes, api, nextjs, panel]
+    needs: [changes, api, nextjs, panel, infra]
     runs-on: ubuntu-latest
     steps:
       - name: Tous les jobs exécutés ont réussi
