@@ -5,6 +5,7 @@ from io import StringIO
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import DataError
 from django.test import TestCase, override_settings
 
 from apps.banner.models import Campaign, Media
@@ -12,6 +13,7 @@ from apps.category.models import Category
 from apps.file.management.commands.reecrire_urls import COLONNES
 from apps.file.models import File
 from apps.menu.models import Menu
+from apps.page.models import Page
 from apps.post.models import Post
 from apps.scrapper.models import Scrapper
 from apps.user.factories import UserFactory
@@ -220,3 +222,79 @@ class ModePrefixeTests(DonneesTestCase):
         self.assertEqual(un.image, CIBLE + '/a.jpg')
         self.assertEqual(deux.image, CIBLE + '/b.jpg')
         self.assertIn(ligne('post_post.image', 2), sortie)
+
+
+@override_settings(FILES_CDN_ENDPOINT=CIBLE)
+class ModeContenuTests(DonneesTestCase):
+    HTML = '<p><img src="%s/a.png"> et <img src="%s/b.png"></p>'
+
+    def test_contenu_html_toutes_occurrences(self):
+        entree = self.HTML % (SOURCE, SOURCE)
+        attendu = self.HTML % (CIBLE, CIBLE)
+        post = self.post(content=entree, intro=entree)
+        page = Page.objects.create(title='t', language='fr', content=entree)
+        scrapper = self.scrapper(content=entree)
+        sortie, _ = self.lancer()
+        for objet, champ in ((post, 'content'), (post, 'intro'), (page, 'content'),
+                             (scrapper, 'content')):
+            objet.refresh_from_db()
+            self.assertEqual(getattr(objet, champ), attendu)
+        self.assertIn(ligne('post_post.content', 1), sortie)
+        self.assertIn(ligne('post_post.intro', 1), sortie)
+        self.assertIn(ligne('page_page.content', 1), sortie)
+        self.assertIn(ligne('scrapper_scrapper.content', 1), sortie)
+
+    def test_regle_chemin_de_bucket(self):
+        source = 'https://s3.exemple.org/urbankiff'
+        post = self.post(image=source + '/x.png', content='<img src="%s/x.png">' % source)
+        self.lancer(self.ecrire_regles([{'source': source}]))
+        post.refresh_from_db()
+        self.assertEqual(post.image, CIBLE + '/x.png')
+        self.assertEqual(post.content, '<img src="%s/x.png">' % CIBLE)
+
+    def test_frontiere_de_prefixe(self):
+        valeurs = [SOURCE.replace('/file', '/files-x') + '/y.png', SOURCE + 'x']
+        post = self.post(image=valeurs[0], content=valeurs[0], intro=valeurs[1])
+        self.lancer()
+        post.refresh_from_db()
+        self.assertEqual((post.image, post.content, post.intro),
+                         (valeurs[0], valeurs[0], valeurs[1]))
+
+    def test_slash_final_indifferent(self):
+        resultats = []
+        for source, cible in ((SOURCE, CIBLE), (SOURCE + '/', CIBLE + '/')):
+            Post.objects.all().delete()
+            post = self.post(image=SOURCE + '/x.png', content='<img src="%s/x.png">' % SOURCE)
+            with override_settings(FILES_CDN_ENDPOINT=cible):
+                self.lancer(self.ecrire_regles([{'source': source}]))
+            post.refresh_from_db()
+            resultats.append((post.image, post.content))
+        self.assertEqual(resultats[0], resultats[1])
+        self.assertEqual(resultats[0][0], CIBLE + '/x.png')
+
+    def test_cible_prefixee_par_la_source(self):
+        source, cible = 'https://h.example/file', 'https://h.example/file/v2'
+        post = self.post(image=source + '/x.png', content='<img src="%s/x.png">' % source)
+        regles = self.ecrire_regles([{'source': source}])
+        with override_settings(FILES_CDN_ENDPOINT=cible):
+            _, erreur = self.lancer(regles)
+            post.refresh_from_db()
+            premier = (post.image, post.content)
+            self.lancer(regles)
+        post.refresh_from_db()
+        self.assertEqual((post.image, post.content), premier)
+        self.assertEqual(post.image, cible + '/x.png')
+        self.assertNotIn('v2/v2', post.image + post.content)
+        self.assertIn('ignoree', erreur)
+
+    def test_atomicite(self):
+        post = self.post(image=SOURCE + '/a.png')
+        self.user.id_img = SOURCE + '/' + 'a' * (1000 - len(SOURCE) - 1)
+        self.user.save()
+        self.assertEqual(len(self.user.id_img), 1000)
+        with self.assertRaises(DataError):
+            self.lancer()
+        post.refresh_from_db()
+        self.user.refresh_from_db()
+        self.assertEqual(post.image, SOURCE + '/a.png')
+        self.assertTrue(self.user.id_img.startswith(SOURCE))

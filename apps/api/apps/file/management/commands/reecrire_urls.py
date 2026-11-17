@@ -5,7 +5,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import models, transaction
-from django.db.models.functions import Concat, Substr
+from django.db.models.functions import Concat, Replace, Substr
 
 REGLES_PAR_DEFAUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -82,12 +82,18 @@ class Command(BaseCommand):
         decomptes = {(modele, champ): 0 for modele, champ, _ in COLONNES}
         with transaction.atomic():
             for source in sources:
+                contenu_ignore = (cible + '/').startswith(source + '/')
+                if contenu_ignore:
+                    self.stderr.write(
+                        'reecrire_urls : regle %s ignoree en mode contenu '
+                        '(la cible commence par la source)' % source)
                 for modele, champ, mode in COLONNES:
-                    if mode != PREFIXE:
+                    if mode == CONTENU and contenu_ignore:
                         continue
                     queryset = apps.get_model(modele).objects.all()
-                    decomptes[(modele, champ)] += self.reecrire_prefixe(
-                        queryset, champ, source, cible)
+                    operation = (
+                        self.reecrire_prefixe if mode == PREFIXE else self.reecrire_contenu)
+                    decomptes[(modele, champ)] += operation(queryset, champ, source, cible)
         return decomptes
 
     def reecrire_prefixe(self, queryset, champ, source, cible):
@@ -97,4 +103,12 @@ class Command(BaseCommand):
             models.Value(cible + '/', output_field=models.CharField()),
             Substr(champ, len(source) + 2),
             output_field=models.CharField())
+        return a_reecrire.update(**{champ: nouvelle_valeur})
+
+    def reecrire_contenu(self, queryset, champ, source, cible):
+        a_reecrire = queryset.filter(**{champ + '__contains': source + '/'})
+        nouvelle_valeur = Replace(
+            champ,
+            models.Value(source + '/', output_field=models.CharField()),
+            models.Value(cible + '/', output_field=models.CharField()))
         return a_reecrire.update(**{champ: nouvelle_valeur})

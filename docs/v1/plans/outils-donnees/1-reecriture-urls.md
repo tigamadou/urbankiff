@@ -33,7 +33,7 @@ autorité). Plan de la mission `outils-donnees`, lot 1 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 3
+Statut : 🟡 en cours · Prochaine tâche : 4
 
 - [x] **Tâche 1** Squelette, chargement et validation des règles, garde-fou de la cible · `feature/outils-donnees-reecriture-urls`
   - [x] Tests (fichier livré, fichier invalide, cible absente) écrits et vus en échec
@@ -43,10 +43,10 @@ Statut : 🟡 en cours · Prochaine tâche : 3
   - [x] Tests (une colonne par test, journal, idempotence, valeurs hors règle intactes) écrits et vus en échec
   - [x] Réécriture et journal
   - [x] Tests verts
-- [ ] **Tâche 3** Colonnes en mode « contenu », règles `s3*`, cas limites
-  - [ ] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
-  - [ ] Implémentation
-  - [ ] Tests verts
+- [x] **Tâche 3** Colonnes en mode « contenu », règles `s3*`, cas limites
+  - [x] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
+  - [x] Implémentation
+  - [x] Tests verts
 - [ ] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
