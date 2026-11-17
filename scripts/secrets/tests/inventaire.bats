@@ -37,3 +37,22 @@ setup() {
     ! grep -q "^$n=" "$RACINE"/scripts/secrets/variables-*.txt
   done
 }
+
+@test "contrat Secrets du lot iso-secrets : PGADMIN_* et MINIO_ROOT_* en saisie" {
+  for n in PGADMIN_EMAIL PGADMIN_MOT_DE_PASSE MINIO_ROOT_USER MINIO_ROOT_PASSWORD; do
+    grep -q "^$n saisie" "$RACINE/scripts/secrets/secrets.txt"
+  done
+  ! grep -q '^MINIO_ROOT_[A-Z_]* aleatoire' "$RACINE/scripts/secrets/secrets.txt"
+}
+
+@test "les noms de secrets.txt et de secrets-inventaire.txt coincident" {
+  a="$( (grep -v '^#' "$RACINE/scripts/secrets/secrets.txt" | awk 'NF{print $1}'; echo POSTGRES_PASSWORD) | sort)"
+  b="$(grep -v '^#' "$RACINE/infra/helm/tests-transverses/secrets-inventaire.txt" | awk 'NF{print $1}' | sort)"
+  [ "$a" = "$b" ]
+}
+
+@test "variables-prod.txt et variables-preprod.txt ont les memes cles" {
+  a="$(grep -v '^#' "$RACINE/scripts/secrets/variables-prod.txt" | sed -n 's/^\([A-Z_0-9]*\)=.*/\1/p' | sort)"
+  b="$(grep -v '^#' "$RACINE/scripts/secrets/variables-preprod.txt" | sed -n 's/^\([A-Z_0-9]*\)=.*/\1/p' | sort)"
+  [ "$a" = "$b" ]
+}
