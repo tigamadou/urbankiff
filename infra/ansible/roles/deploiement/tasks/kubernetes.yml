@@ -17,6 +17,7 @@
   loop_control:
     label: "{{ item.key }}"
   changed_when: false
+  check_mode: false
 
 - name: Lecture du jeton et de l'autorité de certification
   ansible.builtin.command: >-
@@ -26,6 +27,8 @@
     label: "{{ item.key }}"
   register: deploiement_jetons
   changed_when: false
+  # Lecture seule : en --check, une commande sautée renverrait stdout_lines vide et le kubeconfig planterait.
+  check_mode: false
   no_log: true
 
 - name: Kubeconfig de chaque environnement (jamais k3s.yaml)
