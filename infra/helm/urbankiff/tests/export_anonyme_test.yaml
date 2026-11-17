@@ -231,18 +231,25 @@ tests:
               value: desactive
             - name: TWILIO_AUTH_TOKEN
               value: desactive
+            - name: MINIO_ENDPOINT
+              value: urbankiff-rustfs:9000
+            - name: REDIS_ENDPOINT
+              value: redis://127.0.0.1:6379/0
       - matchRegex:
           path: spec.template.spec.initContainers[3].args[0]
           pattern: 'POSTGRES_PASSWORD="\$\(cat /travail/mdp\)" python manage\.py anonymiser'
       - equal:
           path: spec.template.spec.initContainers[3].envFrom
           value:
-            - secretRef:
-                name: urbankiff-secrets
             - configMapRef:
                 name: urbankiff-config
   - it: lister-fichiers a le même garde-fou que anonymiser
     asserts:
+      - equal:
+          path: spec.template.spec.initContainers[4].envFrom
+          value:
+            - configMapRef:
+                name: urbankiff-config
       - equal:
           path: spec.template.spec.initContainers[4].image
           value: ghcr.io/tigamadou/urbankiff-api:1.2.3
@@ -261,6 +268,10 @@ tests:
               value: desactive
             - name: TWILIO_AUTH_TOKEN
               value: desactive
+            - name: MINIO_ENDPOINT
+              value: urbankiff-rustfs:9000
+            - name: REDIS_ENDPOINT
+              value: redis://127.0.0.1:6379/0
       - matchRegex:
           path: spec.template.spec.initContainers[4].args[0]
           pattern: 'python manage\.py lister_fichiers_publics > /travail/fichiers\.txt'
@@ -377,3 +388,25 @@ tests:
           content:
             name: tmp
             emptyDir: {}
+  - it: aucun conteneur hors dépôt ne reçoit le Secret en bloc ni de clé Wasabi
+    asserts:
+      - isNull:
+          path: spec.template.spec.initContainers[0].envFrom
+      - isNull:
+          path: spec.template.spec.initContainers[1].envFrom
+      - isNull:
+          path: spec.template.spec.initContainers[2].envFrom
+      - notContains:
+          path: spec.template.spec.initContainers[3].envFrom
+          content:
+            secretRef:
+              name: urbankiff-secrets
+      - notContains:
+          path: spec.template.spec.initContainers[4].envFrom
+          content:
+            secretRef:
+              name: urbankiff-secrets
+      - isNull:
+          path: spec.template.spec.initContainers[5].envFrom
+      - isNull:
+          path: spec.template.spec.containers[0].envFrom

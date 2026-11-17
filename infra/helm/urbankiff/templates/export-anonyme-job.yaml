@@ -12,6 +12,10 @@
   value: desactive
 - name: TWILIO_AUTH_TOKEN
   value: desactive
+- name: MINIO_ENDPOINT
+  value: urbankiff-rustfs:9000
+- name: REDIS_ENDPOINT
+  value: redis://127.0.0.1:6379/0
 {{- end -}}
 {{- if and .Values.exportAnonyme.prefixe .Values.exportAnonyme.bucketCible -}}
 {{- $env := include "urbankiff.environnement" . -}}
@@ -31,6 +35,7 @@
 {{- /*
 Le pod porte le composant « restauration » pour réutiliser les NetworkPolicies existantes
 (PostgreSQL, RustFS, Internet 443) sans toucher au réseau d'un autre lot.
+MINIO_ENDPOINT et REDIS_ENDPOINT sont inertes (jamais contactés) : minio_service.py lève une erreur à l'import sans endpoint.
 Les données de prod ne vivent que dans ce pod : seul le conteneur « deposer » reçoit les identifiants Wasabi
 et seul « dump-source » lit le Secret de la base de prod.
 */ -}}
@@ -152,7 +157,8 @@ spec:
               set -e
               POSTGRES_PASSWORD="$(cat /travail/mdp)" python manage.py anonymiser
           envFrom:
-            {{- include "urbankiff.envFrom" . | nindent 12 }}
+            - configMapRef:
+                name: {{ .Values.configName }}
           env:
             {{- include "urbankiff.envAnonymisation" . | nindent 12 }}
           resources:
@@ -173,7 +179,8 @@ spec:
               POSTGRES_PASSWORD="$(cat /travail/mdp)" python manage.py lister_fichiers_publics > /travail/fichiers.txt
               [ -s /travail/fichiers.txt ] || { echo "liste des fichiers publics vide" >&2; exit 1; }
           envFrom:
-            {{- include "urbankiff.envFrom" . | nindent 12 }}
+            - configMapRef:
+                name: {{ .Values.configName }}
           env:
             {{- include "urbankiff.envAnonymisation" . | nindent 12 }}
           resources:
