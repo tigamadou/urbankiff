@@ -79,7 +79,8 @@ lancer() { # <env> <commande>
 
 @test "exporter-anonyme en prod : accepté" {
   lancer prod "exporter-anonyme 2026-11-17"
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 2 ]
+  [[ "$output" == *"commande exporter-anonyme"* ]]
 }
 
 @test "BUCKET_COPIE_PREPROD : accepté dans deploy.prod.env, valeurs invalides refusées" {

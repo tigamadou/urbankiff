@@ -377,7 +377,19 @@ cmd_restaurer() {
   verifier_sante
   log "restauration terminée : $PREFIXE"
 }
-cmd_exporter_anonyme() { log "export anonymisé du $DATE_EXPORT"; }
+cmd_exporter_anonyme() {
+  local prefixe="restauration/$DATE_EXPORT-prod-anonyme/"
+  lire_cluster
+  calculer_empreinte
+  version_deployee
+  telecharger_charts
+  rendre_job urbankiff urbankiff export-anonyme-job.yaml \
+    --set "exportAnonyme.prefixe=$prefixe" --set "exportAnonyme.bucketCible=$BUCKET_COPIE_PREPROD" \
+    --set "environnement=prod" --set "wasabi.region=$WASABI_REGION,wasabi.endpoint=s3.$WASABI_REGION.wasabisys.com"
+  lancer_job urbankiff-export-anonyme
+  suivre_job urbankiff-export-anonyme "export terminé"
+  log "export terminé : $prefixe vers $BUCKET_COPIE_PREPROD"
+}
 
 main() {
   analyser_commande
