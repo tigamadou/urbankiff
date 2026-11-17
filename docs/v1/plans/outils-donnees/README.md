@@ -16,13 +16,13 @@ reecriture-urls · anonymisation · outils-web · jobs-donnees · deploiement ·
 
 | n | Lot | Plan | Profil | Dépend de | Issue | Statut |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `reecriture-urls` | [1-reecriture-urls.md](1-reecriture-urls.md) | `api` | — | | ⬜ |
-| 2 | `anonymisation` | [2-anonymisation.md](2-anonymisation.md) | `api` | — | | ⬜ |
-| 3 | `outils-web` | [3-outils-web.md](3-outils-web.md) | `api` | — | | ⬜ |
-| 4 | `jobs-donnees` | [4-jobs-donnees.md](4-jobs-donnees.md) | `api` | — | | ⬜ |
-| 5 | `deploiement` | [5-deploiement.md](5-deploiement.md) | `api` | — | | ⬜ |
-| 6 | `iso-secrets` | [6-iso-secrets.md](6-iso-secrets.md) | `api` | — | | ⬜ |
-| 7 | `ansible` | [7-ansible.md](7-ansible.md) | `api` | — | | ⬜ |
+| 1 | `reecriture-urls` | [1-reecriture-urls.md](1-reecriture-urls.md) | `api` | — | #45 | ⬜ |
+| 2 | `anonymisation` | [2-anonymisation.md](2-anonymisation.md) | `api` | — | #46 | ⬜ |
+| 3 | `outils-web` | [3-outils-web.md](3-outils-web.md) | `api` | — | #47 | ⬜ |
+| 4 | `jobs-donnees` | [4-jobs-donnees.md](4-jobs-donnees.md) | `api` | — | #48 | ⬜ |
+| 5 | `deploiement` | [5-deploiement.md](5-deploiement.md) | `api` | — | #49 | ⬜ |
+| 6 | `iso-secrets` | [6-iso-secrets.md](6-iso-secrets.md) | `api` | — | #50 | ⬜ |
+| 7 | `ansible` | [7-ansible.md](7-ansible.md) | `api` | — | #51 | ⬜ |
 
 Statuts : ⬜ à faire · 🟡 en cours · 🔵 en revue · ✅ fusionné.
 
