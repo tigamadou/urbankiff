@@ -1,5 +1,9 @@
 environnement: prod
 
+hosts:
+  db: db.urbankiff.com
+  stockage: stockage.urbankiff.com
+
 postgres:
   ressources:
     requests:

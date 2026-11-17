@@ -6,3 +6,6 @@ wasabi:
 reseau:
   apiKubernetes:
     cidr: 192.0.2.10/32
+hosts:
+  db: preprod.db.urbankiff.com
+  stockage: preprod.stockage.urbankiff.com

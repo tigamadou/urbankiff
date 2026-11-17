@@ -1,0 +1,157 @@
+{{- $env := include "urbankiff.environnement" . -}}
+{{- $pg := .Values.postgres -}}
+{{- $pga := .Values.pgadmin -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: urbankiff-pgadmin-config
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "pgadmin") | nindent 4 }}
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "urbankiff-pg",
+          "Group": "Servers",
+          "Host": "urbankiff-pg-rw",
+          "Port": 5432,
+          "MaintenanceDB": {{ $pg.base | quote }},
+          "Username": {{ $pg.utilisateur | quote }},
+          "SSLMode": "prefer",
+          "PassFile": "/pgpass/pgpass"
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: urbankiff-pgadmin
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "pgadmin") | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "pgadmin" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "pgadmin") | nindent 8 }}
+      annotations:
+        urbankiff.com/secrets-checksum: {{ .Values.secretsChecksum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      initContainers:
+        # libpq ignore un fichier de mots de passe lisible par le groupe : copie en 0600
+        - name: pgpass
+          image: {{ $pga.image }}
+          command: ["sh", "-c"]
+          args:
+            - umask 077 && cp /pgpass-secret/pgpass /pgpass/pgpass && chmod 0600 /pgpass/pgpass
+          resources:
+            {{- toYaml $pga.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: pgpass-secret
+              mountPath: /pgpass-secret
+              readOnly: true
+            - name: pgpass
+              mountPath: /pgpass
+      containers:
+        - name: pgadmin
+          image: {{ $pga.image }}
+          ports:
+            - name: http
+              containerPort: {{ $pga.port }}
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: PGADMIN_EMAIL
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: PGADMIN_MOT_DE_PASSE
+            - name: PGADMIN_LISTEN_PORT
+              value: {{ $pga.port | quote }}
+            - name: PGADMIN_CONFIG_SERVER_MODE
+              value: "True"
+            - name: PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED
+              value: "False"
+            - name: PGADMIN_DISABLE_POSTFIX
+              value: "true"
+            - name: PGADMIN_SERVER_JSON_FILE
+              value: /pgadmin4/servers.json
+            - name: PGPASSFILE
+              value: /pgpass/pgpass
+          readinessProbe:
+            httpGet:
+              path: /misc/ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /misc/ping
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml $pga.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: donnees
+              mountPath: /var/lib/pgadmin
+            - name: tmp
+              mountPath: /tmp
+            - name: journaux
+              mountPath: /var/log/pgadmin
+            - name: pgpass
+              mountPath: /pgpass
+            - name: serveurs
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+              readOnly: true
+      volumes:
+        - name: donnees
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: journaux
+          emptyDir: {}
+        - name: pgpass
+          emptyDir: {}
+        - name: pgpass-secret
+          secret:
+            secretName: urbankiff-pg-app
+            items:
+              - key: pgpass
+                path: pgpass
+        - name: serveurs
+          configMap:
+            name: urbankiff-pgadmin-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urbankiff-pgadmin
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "pgadmin") | nindent 4 }}
+spec:
+  selector:
+    {{- include "urbankiff.selecteur" "pgadmin" | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $pga.port }}
+      targetPort: http

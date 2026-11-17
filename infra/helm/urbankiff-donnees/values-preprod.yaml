@@ -1,5 +1,9 @@
 environnement: preprod
 
+hosts:
+  db: preprod.db.urbankiff.com
+  stockage: preprod.stockage.urbankiff.com
+
 postgres:
   ressources:
     requests:

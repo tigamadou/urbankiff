@@ -21,6 +21,16 @@ app.kubernetes.io/part-of: urbankiff
 app.kubernetes.io/component: {{ . }}
 {{- end -}}
 
+{{/* Pod du Traefik de k3s : seule origine autorisée vers les outils web. */}}
+{{- define "urbankiff.origineTraefik" -}}
+namespaceSelector:
+  matchLabels:
+    kubernetes.io/metadata.name: kube-system
+podSelector:
+  matchLabels:
+    app.kubernetes.io/name: traefik
+{{- end -}}
+
 {{- define "urbankiff.securityContextPod" -}}
 runAsNonRoot: true
 runAsUser: 10001

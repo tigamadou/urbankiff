@@ -293,6 +293,26 @@ Toutes les cibles lancent des conteneurs aux versions épinglées (`make/helm.mk
 Les cibles de rendu passent des valeurs de test (`ETIQUETTE`, `WASABI_REGION`, `WASABI_BUCKET`, sans secret) ; les
 valeurs réelles viennent du script de déploiement.
 
+## Outils web
+
+Usage et DNS : voir [outils-donnees.md](outils-donnees.md).
+
+- **Deployment `urbankiff-pgadmin`** (composant `pgadmin`, `part-of: urbankiff`, une réplique, stratégie `Recreate`) avec
+  la ConfigMap `urbankiff-pgadmin-config` et le Service `urbankiff-pgadmin` (port 8080). Identifiants par `secretKeyRef`
+  (`PGADMIN_EMAIL`, `PGADMIN_MOT_DE_PASSE`).
+- **Console RustFS** : port `console` (9001) du StatefulSet `urbankiff-rustfs`, exposé par le Service existant ; le S3
+  (9000) reste interne.
+- **Ingress** `urbankiff-pgadmin` (`hosts.db`) et `urbankiff-stockage` (`hosts.stockage`) : cert-manager, classe Traefik,
+  deux Middlewares `traefik.io/v1alpha1` (`urbankiff-outils-limite-debit`, `urbankiff-outils-entetes`) appelés par
+  l'annotation `router.middlewares`. Le rôle `deploy` doit pouvoir gérer les `middlewares` (lot Ansible).
+- **NetworkPolicies** (`reseau-outils.yaml`, additives) : `pgadmin-entree` et `stockage-console-entree` (Traefik de
+  `kube-system` seulement), `pgadmin-sortie` (PostgreSQL 5432 seulement, aucune sortie Internet),
+  `postgres-entree-pgadmin` (entrée de PostgreSQL depuis pgAdmin).
+- **Quota preprod** : régime établi 2 048 Mi de limites sur 3 072 Mi (pgAdmin 320 Mi), pire chevauchement 2 432 Mi,
+  requêtes 1 520 Mi sur 1 536 Mi (régime établi 936, Barman 256, pod de mise à jour 200, plus gros Job 128 ; pgAdmin
+  96 Mi), contrôlées par `controle.rb`.
+- **Schéma kubeconform** du Middleware : `infra/helm/schemas/traefik.io/middleware_v1alpha1.json`.
+
 ## Iso preprod / prod
 
 La preprod est iso à la prod : mêmes valeurs, mêmes secrets, seule la taille (mémoire) et les noms d'hôtes changent

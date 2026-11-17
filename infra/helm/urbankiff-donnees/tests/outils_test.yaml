@@ -1,0 +1,565 @@
+suite: outils
+templates:
+  - templates/outils-ingress.yaml
+  - templates/pgadmin.yaml
+  - templates/outils-middlewares.yaml
+  - templates/reseau-outils.yaml
+values:
+  - valeurs-communes.yaml
+release:
+  namespace: urbankiff-preprod
+tests:
+  - it: quatre NetworkPolicies des outils, libellées part-of
+    template: templates/reseau-outils.yaml
+    asserts:
+      - hasDocuments:
+          count: 4
+      - equal:
+          path: metadata.name
+          value: pgadmin-entree
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: stockage-console-entree
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: pgadmin-sortie
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: postgres-entree-pgadmin
+        documentIndex: 3
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+        documentIndex: 0
+  - it: Traefik vers pgAdmin et vers la console, uniquement
+    template: templates/reseau-outils.yaml
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: pgadmin
+        documentIndex: 0
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress]
+        documentIndex: 0
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 8080
+                  protocol: TCP
+        documentIndex: 0
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: rustfs
+        documentIndex: 1
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 9001
+                  protocol: TCP
+        documentIndex: 1
+  - it: pgAdmin sort uniquement vers PostgreSQL 5432, sans ipBlock
+    template: templates/reseau-outils.yaml
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value: [Egress]
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: pgadmin
+      - equal:
+          path: spec.egress
+          value:
+            - to:
+                - podSelector:
+                    matchLabels:
+                      cnpg.io/cluster: urbankiff-pg
+              ports:
+                - port: 5432
+                  protocol: TCP
+      - notExists:
+          path: spec.egress[0].to[0].ipBlock
+      - lengthEqual:
+          path: spec.egress
+          count: 1
+  - it: PostgreSQL accepte le composant pgadmin sur 5432
+    template: templates/reseau-outils.yaml
+    documentIndex: 3
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            cnpg.io/cluster: urbankiff-pg
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/part-of: urbankiff
+                      app.kubernetes.io/component: pgadmin
+              ports:
+                - port: 5432
+                  protocol: TCP
+  - it: hosts.stockage est obligatoire
+    template: templates/outils-ingress.yaml
+    set:
+      hosts.stockage: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: hosts.stockage est obligatoire
+  - it: deux Ingress cert-manager et Traefik, TLS par hôte, backends sur les bons Services
+    template: templates/outils-ingress.yaml
+    asserts:
+      - isKind:
+          of: Ingress
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 0
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+        documentIndex: 0
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt
+        documentIndex: 0
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: preprod.db.urbankiff.com
+        documentIndex: 0
+      - equal:
+          path: spec.tls[0].secretName
+          value: urbankiff-db-tls
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].host
+          value: preprod.db.urbankiff.com
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-pgadmin
+            port:
+              number: 8080
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-stockage
+        documentIndex: 1
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+        documentIndex: 1
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt
+        documentIndex: 1
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: preprod.stockage.urbankiff.com
+        documentIndex: 1
+      - equal:
+          path: spec.tls[0].secretName
+          value: urbankiff-stockage-tls
+        documentIndex: 1
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-rustfs
+            port:
+              number: 9001
+        documentIndex: 1
+  - it: annotation router.middlewares avec le namespace de la release, sur les deux Ingress
+    template: templates/outils-ingress.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
+          value: urbankiff-preprod-urbankiff-outils-limite-debit@kubernetescrd,urbankiff-preprod-urbankiff-outils-entetes@kubernetescrd
+        documentIndex: 0
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
+          value: urbankiff-preprod-urbankiff-outils-limite-debit@kubernetescrd,urbankiff-preprod-urbankiff-outils-entetes@kubernetescrd
+        documentIndex: 1
+  - it: aucun hôte s3, aucun entrypoint non TLS
+    template: templates/outils-ingress.yaml
+    asserts:
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: ^(preprod\.)?s3
+        documentIndex: 0
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: ^(preprod\.)?s3
+        documentIndex: 1
+      - notExists:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.entrypoints"]
+        documentIndex: 0
+      - notExists:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.entrypoints"]
+        documentIndex: 1
+  - it: Middleware de limitation de débit issu des valeurs
+    template: templates/outils-middlewares.yaml
+    documentIndex: 0
+    set:
+      ingress.limiteDebit.moyenne: 7
+      ingress.limiteDebit.rafale: 9
+    asserts:
+      - equal:
+          path: apiVersion
+          value: traefik.io/v1alpha1
+      - isKind:
+          of: Middleware
+      - equal:
+          path: metadata.name
+          value: urbankiff-outils-limite-debit
+      - equal:
+          path: spec.rateLimit.average
+          value: 7
+      - equal:
+          path: spec.rateLimit.burst
+          value: 9
+      - equal:
+          path: spec.rateLimit.sourceCriterion.ipStrategy.depth
+          value: 0
+  - it: Middleware d'en-têtes HSTS issu des valeurs
+    template: templates/outils-middlewares.yaml
+    documentIndex: 1
+    set:
+      ingress.hsts.secondes: 100
+    asserts:
+      - equal:
+          path: apiVersion
+          value: traefik.io/v1alpha1
+      - equal:
+          path: metadata.name
+          value: urbankiff-outils-entetes
+      - equal:
+          path: spec.headers.stsSeconds
+          value: 100
+      - equal:
+          path: spec.headers.stsIncludeSubdomains
+          value: true
+      - equal:
+          path: spec.headers.forceSTSHeader
+          value: true
+      - equal:
+          path: spec.headers.contentTypeNosniff
+          value: true
+      - equal:
+          path: spec.headers.frameDeny
+          value: true
+  - it: aucun middleware d'authentification
+    template: templates/outils-middlewares.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - notExists:
+          path: spec.basicAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.forwardAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.digestAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.basicAuth
+        documentIndex: 1
+      - notExists:
+          path: spec.forwardAuth
+        documentIndex: 1
+      - notExists:
+          path: spec.digestAuth
+        documentIndex: 1
+  - it: hosts.db est obligatoire
+    template: templates/outils-ingress.yaml
+    set:
+      hosts.db: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: hosts.db est obligatoire
+  - it: pgAdmin rend une ConfigMap, un Deployment et un Service
+    template: templates/pgadmin.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin-config
+        documentIndex: 0
+      - isKind:
+          of: Deployment
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 1
+      - isKind:
+          of: Service
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 2
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+        documentIndex: 2
+  - it: libellés part-of et composant pgadmin, une réplique en Recreate
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: pgadmin
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+  - it: identifiants pgAdmin par secretKeyRef, jamais en value
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_DEFAULT_EMAIL
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: PGADMIN_EMAIL
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: PGADMIN_MOT_DE_PASSE
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: PGADMIN_DEFAULT_PASSWORD
+            value: ""
+  - it: mode serveur, mises à jour désactivées, servers.json et fichier de mots de passe
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_CONFIG_SERVER_MODE
+            value: "True"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED
+            value: "False"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_SERVER_JSON_FILE
+            value: /pgadmin4/servers.json
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSFILE
+            value: /pgpass/pgpass
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGADMIN_LISTEN_PORT
+            value: "8080"
+  - it: servers.json cible urbankiff-pg-rw sans mot de passe
+    template: templates/pgadmin.yaml
+    documentIndex: 0
+    asserts:
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Host": "urbankiff-pg-rw"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Port": 5432'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"MaintenanceDB": "urbankiff"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"Username": "urbankiff"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"SSLMode": "prefer"'
+      - matchRegex:
+          path: data["servers.json"]
+          pattern: '"PassFile": "/pgpass/pgpass"'
+      - notMatchRegex:
+          path: data["servers.json"]
+          pattern: '(?i)"password"'
+  - it: le mot de passe de la base vient du Secret urbankiff-pg-app copié en 0600 par l'init container
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pgpass-secret
+            secret:
+              secretName: urbankiff-pg-app
+              items:
+                - key: pgpass
+                  path: pgpass
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pgpass
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: dpage/pgadmin4:9.9.0
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: chmod 0600 /pgpass/pgpass
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: pgpass-secret
+            mountPath: /pgpass-secret
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: pgpass
+            mountPath: /pgpass
+  - it: seuls des emptyDir sont inscriptibles, servers.json et le Secret en lecture seule
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: donnees
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: journaux
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: donnees
+            mountPath: /var/lib/pgadmin
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: journaux
+            mountPath: /var/log/pgadmin
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: serveurs
+            mountPath: /pgadmin4/servers.json
+            subPath: servers.json
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: serveurs
+            configMap:
+              name: urbankiff-pgadmin-config
+  - it: pgAdmin durci, sondes, limites et empreinte des secrets
+    template: templates/pgadmin.yaml
+    documentIndex: 1
+    set:
+      secretsChecksum: abc123
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.capabilities.drop
+          value: [ALL]
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 96Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 320Mi
+      - exists:
+          path: spec.template.spec.initContainers[0].resources.requests.memory
+      - exists:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.metadata.annotations["urbankiff.com/secrets-checksum"]
+          value: abc123

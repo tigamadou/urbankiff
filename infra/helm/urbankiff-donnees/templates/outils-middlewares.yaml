@@ -1,0 +1,28 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: urbankiff-outils-limite-debit
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "outils-web") | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ .Values.ingress.limiteDebit.moyenne }}
+    burst: {{ .Values.ingress.limiteDebit.rafale }}
+    sourceCriterion:
+      ipStrategy:
+        depth: 0
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: urbankiff-outils-entetes
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "outils-web") | nindent 4 }}
+spec:
+  headers:
+    stsSeconds: {{ .Values.ingress.hsts.secondes }}
+    stsIncludeSubdomains: true
+    forceSTSHeader: true
+    contentTypeNosniff: true
+    frameDeny: true

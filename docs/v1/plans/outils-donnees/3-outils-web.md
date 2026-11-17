@@ -35,17 +35,17 @@ autorité). Plan de la mission `outils-donnees`, lot 3 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ⬜ à faire · Prochaine tâche : aucune
 
-- [ ] **Tâche 1** Valeurs, hôtes et helpers · `feature/outils-donnees-outils-web`
-  - [ ] sections `hosts`, `ingress`, `pgadmin`, `rustfs.console` de `values.yaml`, hôtes dans `values-preprod.yaml` et `values-prod.yaml`
-  - [ ] helper d'origine Traefik et de libellés, `valeurs-communes.yaml`
-- [ ] **Tâche 2** Console RustFS sur le StatefulSet existant
-- [ ] **Tâche 3** pgAdmin 4 : ConfigMap, Deployment, Service
-- [ ] **Tâche 4** Middlewares Traefik, Ingress et schéma CRD pour kubeconform
-- [ ] **Tâche 5** NetworkPolicies des outils
-- [ ] **Tâche 6** Quota de la preprod et documentation
-- [ ] **Tâche 7** Vérification du lot
+- [x] **Tâche 1** Valeurs, hôtes et helpers · `feature/outils-donnees-outils-web`
+  - [x] sections `hosts`, `ingress`, `pgadmin`, `rustfs.console` de `values.yaml`, hôtes dans `values-preprod.yaml` et `values-prod.yaml`
+  - [x] helper d'origine Traefik et de libellés, `valeurs-communes.yaml`
+- [x] **Tâche 2** Console RustFS sur le StatefulSet existant
+- [x] **Tâche 3** pgAdmin 4 : ConfigMap, Deployment, Service
+- [x] **Tâche 4** Middlewares Traefik, Ingress et schéma CRD pour kubeconform
+- [x] **Tâche 5** NetworkPolicies des outils
+- [x] **Tâche 6** Quota de la preprod et documentation
+- [x] **Tâche 7** Vérification du lot
 
 > Reprise : (vide)
 
@@ -163,7 +163,7 @@ Contraintes propres au lot (spec §§ 2, 3, 5.4, 5.5, 8.3) :
   preprod.stockage.urbankiff.com`. Lancer `make helm-unittest CHART=urbankiff-donnees` : le voir échouer.
 - [ ] **Étape 2** : ajouter dans `values.yaml` (et seulement là) : `hosts: {db: "", stockage: ""}`, `ingress:` (classe,
   clusterIssuer, limiteDebit moyenne 20 / rafale 50, hsts secondes 31536000), `pgadmin:` (image épinglée
-  `dpage/pgadmin4:<version>` choisie par le constructeur, port, `ressources` requests 160Mi / limits 320Mi), et
+  `dpage/pgadmin4:<version>` choisie par le constructeur, port, `ressources` requests 96Mi / limits 320Mi), et
   `rustfs.console: {actif: true, port: 9001}` sans toucher le reste de `rustfs`. Ajouter `hosts.db` et
   `hosts.stockage` à `values-preprod.yaml` et `values-prod.yaml` (seul écart autorisé, avec `pgadmin.ressources` si besoin).
 - [ ] **Étape 3** : ajouter `urbankiff.origineTraefik` à `_helpers.tpl` (copie de celui du chart `urbankiff`).
