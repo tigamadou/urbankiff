@@ -233,7 +233,10 @@ helm template urbankiff-donnees infra/helm/urbankiff-donnees -f infra/helm/urban
   préfixe (espace, guillemet, `;`, `..`, `$`) fait échouer le rendu (`restauration.prefixe`).
 - Déroulé : `recuperer` (rclone copie le préfixe de Wasabi), `remise-a-zero` (`psql` avec `ON_ERROR_STOP` : contrôle que
   l'utilisateur applicatif possède le schéma `public` via `pg_has_role(current_user, nspowner, 'USAGE')`, échec explicite sinon,
-  puis `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), `pg-restore` (`--no-owner --no-privileges --schema=public`),
+  puis `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), `pg-restore` (`--no-owner --no-privileges --schema=public`,
+  client `postgres.versionClientRestauration`, 17 par défaut, jamais inférieur à `postgres.version` : il lit les archives
+  d'un `pg_dump` 17, format 1.16 illisible par `pg_restore` 15 ; le SQL produit passe par `psql` avec `ON_ERROR_STOP`, la
+  ligne `SET transaction_timeout`, inconnue avant PostgreSQL 17, étant retirée),
   puis le conteneur `fichiers` (copie `fichiers/` vers RustFS seulement si le dossier existe : une sauvegarde sans fichiers
   est valide).
 - Aucune purge : rien n'est supprimé dans Wasabi, la sauvegarde y reste. Valeurs : `restauration.prefixe` (défaut vide),

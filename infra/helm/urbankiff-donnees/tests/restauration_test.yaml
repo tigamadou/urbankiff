@@ -26,6 +26,13 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "restauration.prefixe"
+  - it: refuse un client pg_restore plus ancien que le serveur
+    set:
+      restauration.prefixe: restauration/2026-12-01/
+      postgres.versionClientRestauration: 14
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.versionClientRestauration"
   - it: refuse un préfixe avec guillemet
     set:
       restauration.prefixe: 'restauration/2026-12-01"/'
@@ -106,10 +113,22 @@ tests:
           value: pg-restore
       - equal:
           path: spec.template.spec.initContainers[2].image
-          value: ghcr.io/cloudnative-pg/postgresql:15
+          value: ghcr.io/cloudnative-pg/postgresql:17
       - equal:
           path: spec.template.spec.initContainers[2].command
-          value: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/base.dump"]
+          value: ["bash", "-c"]
+      - matchRegex:
+          path: spec.template.spec.initContainers[2].args[0]
+          pattern: 'set -euo pipefail'
+      - matchRegex:
+          path: spec.template.spec.initContainers[2].args[0]
+          pattern: 'pg_restore --no-owner --no-privileges --schema=public -f - /restauration/base\.dump'
+      - matchRegex:
+          path: spec.template.spec.initContainers[2].args[0]
+          pattern: "sed '/\\^SET transaction_timeout = /d'"
+      - matchRegex:
+          path: spec.template.spec.initContainers[2].args[0]
+          pattern: 'psql -X -q -v ON_ERROR_STOP=1'
       - equal:
           path: spec.template.spec.containers[0].name
           value: fichiers

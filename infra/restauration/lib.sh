@@ -109,10 +109,23 @@ psql_base() {
 }
 
 # restaurer_dump <nom> <dump> [options pg_restore] : le dump est lu en entrée standard, jamais monté en écriture.
+# Comme le Job du chart : le client épinglé convertit l'archive en SQL (celui de la base jetable, à la version du serveur
+# d'origine, ne lit pas une archive d'un pg_dump plus récent, ex. format 1.16 de pg_dump 17), la ligne
+# « SET transaction_timeout » (inconnue avant PostgreSQL 17) est retirée, puis psql rejoue le tout et s'arrête à la
+# première erreur.
 restaurer_dump() {
   local nom="$1" dump="$2"
   shift 2
-  docker exec -i "$(conteneur "$nom")" pg_restore -U postgres -d app "$@" < "$dump"
+  docker run --rm -i --network none --cap-drop ALL --security-opt no-new-privileges --read-only "$PG_CLIENT_IMAGE" \
+    pg_restore -f - "$@" < "$dump" \
+    | sed '/^SET transaction_timeout = /d' \
+    | docker exec -i "$(conteneur "$nom")" psql -U postgres -d app -X -q -v ON_ERROR_STOP=1
+}
+
+# schema_du_dump <dump> : schéma seul en SQL texte sur la sortie standard (client épinglé, sans réseau).
+schema_du_dump() {
+  docker run --rm -i --network none --cap-drop ALL --security-opt no-new-privileges --read-only "$PG_CLIENT_IMAGE" \
+    pg_restore --schema-only -f - < "$1"
 }
 
 # decomptes_tables <nom> [schema] : lignes « schema.table|décompte exact » des tables hors schémas système.

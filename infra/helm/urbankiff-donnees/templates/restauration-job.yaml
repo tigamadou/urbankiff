@@ -3,6 +3,9 @@
 {{- if not (regexMatch "^restauration/[0-9]{4}-[0-9]{2}-[0-9]{2}(-prod-anonyme)?/?$" .Values.restauration.prefixe) -}}
 {{- fail "restauration.prefixe doit valoir restauration/AAAA-MM-JJ/ ou restauration/AAAA-MM-JJ-prod-anonyme/" -}}
 {{- end -}}
+{{- if lt (int .Values.postgres.versionClientRestauration) (int .Values.postgres.version) -}}
+{{- fail "postgres.versionClientRestauration doit être supérieure ou égale à postgres.version" -}}
+{{- end -}}
 {{- $prefixe := trimSuffix "/" .Values.restauration.prefixe -}}
 apiVersion: batch/v1
 kind: Job
@@ -88,8 +91,16 @@ spec:
             - name: tmp
               mountPath: /tmp
         - name: pg-restore
-          image: {{ printf "%s:%d" .Values.image.postgres (int .Values.postgres.version) }}
-          command: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/{{ .Values.restauration.fichierDump }}"]
+          image: {{ printf "%s:%d" .Values.image.postgres (int .Values.postgres.versionClientRestauration) }}
+          # pg_restore du client (archive lue jusqu'à sa version) produit le SQL ; « SET transaction_timeout » (inconnu
+          # avant PostgreSQL 17) est retiré ; psql s'arrête à la première erreur.
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              pg_restore --no-owner --no-privileges --schema=public -f - /restauration/{{ .Values.restauration.fichierDump }} \
+                | sed '/^SET transaction_timeout = /d' \
+                | psql -X -q -v ON_ERROR_STOP=1
           env:
             - name: HOME
               value: /tmp

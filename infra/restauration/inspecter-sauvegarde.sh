@@ -35,7 +35,7 @@ if ! restaurer_dump base "$dump" --no-owner --no-privileges > /dev/null; then
   exit 1
 fi
 # Schéma seul en texte : sert à lire propriétaires, droits et corps de fonctions, jamais les données.
-docker exec -i "$(conteneur base)" sh -c 'pg_restore --schema-only -f /tmp/schema.sql' < "$dump"
+schema_du_dump "$dump" | docker exec -i "$(conteneur base)" sh -c 'cat > /tmp/schema.sql'
 
 sql() {
   psql_base base -At -F'|' "$@"
