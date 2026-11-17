@@ -1,0 +1,47 @@
+{{- if .Values.apresRestauration.actif -}}
+{{- $env := include "urbankiff.environnement" . -}}
+{{- /*
+Le pod porte le composant « migrations » pour réutiliser les NetworkPolicies existantes
+(PostgreSQL, Redis, RustFS, Internet 443/465/587) sans toucher au réseau d'un autre lot.
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: urbankiff-apres-restauration
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "apres-restauration") | nindent 4 }}
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "migrations") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      containers:
+        - name: apres-restauration
+          image: {{ include "urbankiff.imageApi" . }}
+          command:
+            - sh
+            - -c
+            - python manage.py migrate && python manage.py reecrire_urls && python manage.py prodseed && python manage.py clearcache
+          envFrom:
+            {{- include "urbankiff.envFrom" . | nindent 12 }}
+          env:
+            {{- include "urbankiff.envApp" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.apresRestauration.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

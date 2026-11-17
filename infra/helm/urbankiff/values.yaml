@@ -76,3 +76,13 @@ reseau:
     - 172.16.0.0/12
     - 192.168.0.0/16
     - 169.254.0.0/16
+
+# Job de remise en état après une restauration (migrate, reecrire_urls, prodseed, clearcache) : absent par défaut,
+# rendu à la demande par le script de déploiement (helm template --show-only, --set apresRestauration.actif=true)
+apresRestauration:
+  actif: false
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
