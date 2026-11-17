@@ -14,21 +14,8 @@ setup() {
 noms() { grep -vE '^(#|$)' "$1" | sed -E 's/[ =].*//' | sort -u | tr '\n' ' '; }
 trie() { tr ' ' '\n' <<< "$1" | grep -v '^$' | sort -u | tr '\n' ' '; }
 
-@test "SECRET_KEYS contient tous les noms de scripts/secrets/secrets.txt" {
-  for nom in $(noms "$SECRETS/secrets.txt"); do
-    [[ " $SECRET_KEYS " == *" $nom "* ]] || { echo "absent : $nom"; return 1; }
-  done
-}
-
-@test "tout nom de SECRET_KEYS absent de secrets.txt appartient au contrat" {
-  for nom in $SECRET_KEYS; do
-    grep -qE "^$nom( |=)" "$SECRETS/secrets.txt" || [[ " $CLES_CONTRAT " == *" $nom "* ]] || { echo "hors contrat : $nom"; return 1; }
-  done
-}
-
-@test "SECRET_KEYS contient les deux clés du contrat" {
-  [[ " $SECRET_KEYS " == *" PGADMIN_EMAIL "* ]]
-  [[ " $SECRET_KEYS " == *" PGADMIN_MOT_DE_PASSE "* ]]
+@test "SECRET_KEYS = noms de scripts/secrets/secrets.txt (égalité stricte)" {
+  [ "$(trie "$SECRET_KEYS")" = "$(noms "$SECRETS/secrets.txt")" ]
 }
 
 @test "VARIABLE_KEYS = variables de prod et de preprod" {
