@@ -56,19 +56,11 @@ def ecrire_regles(testcase, contenu):
 MOTIFS = ["email", "contact", "name", "ip", "addr", "token", "password"]
 
 
-def regles_de_test(vider=(), classees=None):
-    schema = lire_schema(connection)
-    classees = classees or {}
-    regles = dict(REGLES_VIDES, motifs_suspects=MOTIFS, tables_a_vider=list(vider), tables_classees={})
-    for table, contenu in classees.items():
-        colonnes = {c: dict(contenu.get(c, {"action": "garder"})) for c in schema[table]}
-        for regle in colonnes.values():
-            if regle["action"] == "garder":
-                regle["justification"] = "test"
-        regles["tables_classees"][table] = {"cle": "id", "colonnes": colonnes}
+def regles_de_test():
+    regles = dict(REGLES_VIDES, motifs_suspects=MOTIFS)
     regles["sans_donnees_personnelles"] = {
         table: {c: "test" for c in colonnes if est_suspecte(c, MOTIFS)}
-        for table, colonnes in schema.items() if table not in vider and table not in classees}
+        for table, colonnes in lire_schema(connection).items()}
     return regles
 
 
@@ -202,6 +194,7 @@ class ChargementReglesTests(SimpleTestCase):
         self.assert_invalide(self.regles(tables_a_vider="t"))
         self.assert_invalide(self.regles(motifs_suspects="email"))
         self.assert_invalide(self.regles(sans_donnees_personnelles={"t": []}))
+        self.assert_invalide(self.regles(tables_classees=[]))
         self.assert_invalide(self.regles(tables_classees={"t": []}))
         self.assert_invalide(self.regles(tables_classees={"t": {"colonnes": {"x": []}}}))
 
@@ -397,8 +390,12 @@ class VerifierClassementTests(SimpleTestCase):
     def test_regles_perimees(self):
         regles = regles_synthetiques(tables_a_vider=["disparue"])
         regles["tables_classees"]["t"]["colonnes"]["phone"] = {"action": "garder"}
+        regles["tables_classees"]["classee_disparue"] = {"cle": "id", "colonnes": {}}
+        regles["sans_donnees_personnelles"]["sans_disparue"] = {}
         self.assertEqual(verifier_classement(regles, schema_synthetique()), [
+            "règle périmée, la table n'existe plus : classee_disparue",
             "règle périmée, la table n'existe plus : disparue",
+            "règle périmée, la table n'existe plus : sans_disparue",
             "règle périmée, la colonne n'existe plus : t.phone",
         ])
 
