@@ -23,4 +23,4 @@ rustfs:
     requests:
       memory: 64Mi
     limits:
-      memory: 192Mi
+      memory: 320Mi
