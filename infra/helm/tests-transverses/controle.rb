@@ -238,15 +238,16 @@ puts '== Quota de la preprod'
 docs = charge('preprod')
 
 # Auto-test du calcul sur des documents en mémoire : un total au-dessus du quota échoue, en dessous passe.
-def deploiement(memoire_cle, valeur, replicas: 1)
-  { 'kind' => 'Deployment', 'metadata' => { 'name' => 'x' },
+def deploiement(memoire_cle, valeur, replicas: 1, kind: 'Deployment')
+  { 'kind' => kind, 'metadata' => { 'name' => 'x' },
     'spec' => { 'replicas' => replicas, 'template' => { 'spec' => { 'containers' => [{ 'resources' => { memoire_cle => { 'memory' => valeur } } }] } } } }
 end
-%w[requests limits].each do |cle|
-  dessous = memoire_quota([deploiement(cle, '100Mi')], cle)
-  dessus = memoire_quota([deploiement(cle, '1000Mi', replicas: 2)], cle)
-  verifie "auto-test du calcul de quota (#{cle}) : sous le quota passe, au-dessus échoue",
-          dessous[:total] <= 3072 && dessus[:total] > 1536 ? [] : ["dessous=#{dessous[:total]} dessus=#{dessus[:total]}"]
+{ 'requests' => QUOTA_REQUETES_PREPROD_MI, 'limits' => QUOTA_PREPROD_MI }.each do |cle, quota|
+  # StatefulSet : pas de surplus de mise à jour, le total vaut valeur + auxiliaire Barman.
+  juste_dessous = memoire_quota([deploiement(cle, "#{quota - AUXILIAIRE_BARMAN_MI}Mi", kind: 'StatefulSet')], cle)
+  juste_dessus = memoire_quota([deploiement(cle, "#{quota - AUXILIAIRE_BARMAN_MI + 1}Mi", kind: 'StatefulSet')], cle)
+  verifie "auto-test du calcul de quota (#{cle}) : #{quota} Mi passe, #{quota + 1} Mi échoue",
+          juste_dessous[:total] <= quota && juste_dessus[:total] > quota ? [] : ["dessous=#{juste_dessous[:total]} dessus=#{juste_dessus[:total]}"]
 end
 
 limites = memoire_quota(docs, 'limits')
