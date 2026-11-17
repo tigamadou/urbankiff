@@ -15,8 +15,11 @@ SCAN_DOSSIER := .superpowers/secrets-scan
 .PHONY: secrets-scan secrets-scan-historique ports-scan
 
 secrets-scan: ## Cherche des secrets dans les fichiers suivis ou à suivre (hors fichiers ignorés), valeurs masquées
-	rm -rf $(SCAN_DOSSIER) && mkdir -p $(SCAN_DOSSIER)
-	docker run --rm -v "$(CURDIR)":/repo:ro -v "$(CURDIR)/$(SCAN_DOSSIER)":/out -w /repo alpine:3.20 sh -c 'apk add -q --no-cache git tar >/dev/null && git config --global --add safe.directory /repo && git ls-files -z -co --exclude-standard | tar -c --null -T - | tar -x -C /out'
+	rm -rf $(SCAN_DOSSIER) $(SCAN_DOSSIER).liste && mkdir -p $(SCAN_DOSSIER)
+# Liste faite par le git de l'hôte : dans un worktree de lot, .git pointe hors du montage du conteneur.
+	git ls-files -z -co --exclude-standard > $(SCAN_DOSSIER).liste
+	docker run --rm -v "$(CURDIR)":/repo:ro -v "$(CURDIR)/$(SCAN_DOSSIER)":/out -w /repo alpine:3.20 sh -c 'apk add -q --no-cache tar >/dev/null && tar -c --null -T $(SCAN_DOSSIER).liste | tar -x -C /out'
+	rm -f $(SCAN_DOSSIER).liste
 	docker run --rm -v "$(CURDIR)/$(SCAN_DOSSIER)":/scan:ro -v "$(CURDIR)/.gitleaks.toml":/config.toml:ro $(GITLEAKS_IMAGE) dir /scan --config /config.toml --redact --no-banner -v
 
 secrets-scan-historique: ## Cherche des secrets dans tout l'historique git d'un dépôt (DOSSIER=<chemin>), valeurs masquées
