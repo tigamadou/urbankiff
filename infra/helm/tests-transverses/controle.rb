@@ -2,10 +2,13 @@
 # conteneur Ruby, bibliothèque standard seulement). Chaque contrôle liste ses violations ; une seule suffit à échouer.
 # Entrées : /rendu/<chart>-<env>.yaml (rendus), /charts (charts, lecture seule).
 require 'yaml'
+require_relative 'iso'
 
 SECRETS_INVENTAIRE = '/charts/tests-transverses/secrets-inventaire.txt'
 # Quota de la preprod (spec § 8.5, A9) en Mi : posé par le rôle plateforme d'Ansible, pas par les charts
 QUOTA_PREPROD_MI = 3072
+# Quota de requêtes mémoire de la preprod (B9), même calcul que les limites
+QUOTA_REQUETES_PREPROD_MI = 1536
 # Conteneur auxiliaire du plugin Barman Cloud ajouté par l'opérateur au pod PostgreSQL (limite constatée sur le cluster)
 AUXILIAIRE_BARMAN_MI = 256
 CIDR_POD = '10.42.0.0/16'
@@ -68,6 +71,22 @@ end
 def mi(valeur)
   raise "unité inattendue : #{valeur}" unless valeur.to_s =~ /\A(\d+)Mi\z/
   Regexp.last_match(1).to_i
+end
+
+# Mémoire (en Mi) selon `cle` (limits ou requests) : régime établi, pod de mise à jour (maxSurge 1 par défaut : un pod
+# de plus que le régime établi pendant le remplacement), plus gros Job, et total avec l'auxiliaire Barman.
+def memoire_quota(docs, cle)
+  pod_mi = ->(spec) { spec['containers'].sum { |c| mi(c.dig('resources', cle, 'memory')) } }
+  regime = docs.sum do |d|
+    case d['kind']
+    when 'Deployment', 'StatefulSet' then (d['spec']['replicas'] || 1) * pod_mi.call(d['spec']['template']['spec'])
+    when 'Cluster' then d['spec']['instances'] * mi(d.dig('spec', 'resources', cle, 'memory'))
+    else 0
+    end
+  end
+  plus_gros_job = pods(docs).select { |_, _, _, k| %w[Job CronJob].include?(k) }.flat_map { |_, spec, _, _| conteneurs(spec).map { |c| mi(c.dig('resources', cle, 'memory')) } }.max || 0
+  surplus = docs.select { |d| d['kind'] == 'Deployment' }.map { |d| pod_mi.call(d['spec']['template']['spec']) }.max || 0
+  { regime: regime, surplus: surplus, plus_gros_job: plus_gros_job, total: regime + AUXILIAIRE_BARMAN_MI + surplus + plus_gros_job }
 end
 
 noms_secrets = File.readlines(SECRETS_INVENTAIRE, chomp: true).reject { |l| l.strip.empty? || l.start_with?('#') }.map { |l| l.split.first }
@@ -158,13 +177,11 @@ noms_secrets = File.readlines(SECRETS_INVENTAIRE, chomp: true).reject { |l| l.st
   tous_pods.each do |n, spec, _, _|
     conteneurs(spec).each do |c|
       (c['env'] || []).each do |e|
-        next unless e.key?('value') && (noms_secrets.include?(e['name']))
-        inerte = TWILIO.include?(e['name']) && e['value'] == 'desactive'
-        v << "#{n} : #{e['name']}" unless inerte
+        v << "#{n} : #{e['name']}" if e.key?('value') && noms_secrets.include?(e['name'])
       end
     end
   end
-  verifie "#{env} : aucune clé de l'inventaire des secrets en value: (hors valeurs inertes Twilio)", v
+  verifie "#{env} : aucune clé de l'inventaire des secrets en value:", v
 
   v = []
   tous_pods.each do |n, spec, _, _|
@@ -186,31 +203,66 @@ def cles_secret(docs)
   docs.each { |d| trouve(d, 'secretKeyRef') { |r| cles << r['key'] } }
   cles.uniq
 end
-verifie 'preprod : aucune référence aux clés TWILIO_* du Secret', cles_secret(charge('preprod')).grep(/\ATWILIO_/)
-inertes = []
-charge('preprod').each { |d| pods([d]).each { |n, spec, _, _| conteneurs(spec).each { |c| (c['env'] || []).each { |e| inertes << "#{n} : #{e['name']}" if TWILIO.include?(e['name']) && e['value'] != 'desactive' } } } }
-verifie 'preprod : valeurs Twilio inertes', inertes
-verifie 'prod : TWILIO_ACCOUNT_SID et TWILIO_AUTH_TOKEN référencés par le Secret',
-        (TWILIO - cles_secret(charge('prod'))).map { |k| "#{k} absent" }
+%w[prod preprod].each do |env|
+  verifie "#{env} : TWILIO_ACCOUNT_SID et TWILIO_AUTH_TOKEN référencés par le Secret",
+          (TWILIO - cles_secret(charge(env))).map { |k| "#{k} absent" }
+  inertes = []
+  charge(env).each { |d| pods([d]).each { |n, spec, _, _| conteneurs(spec).each { |c| (c['env'] || []).each { |e| inertes << "#{n} : #{e['name']}" if TWILIO.include?(e['name']) && e.key?('value') } } } }
+  verifie "#{env} : aucune valeur Twilio inerte ou en clair", inertes
+end
+
+puts '== Iso preprod / prod'
+verifie 'iso-test.rb : auto-test du contrôle d\'iso', (system('ruby', File.join(__dir__, 'iso-test.rb')) ? [] : ['iso-test.rb a échoué'])
+charts = Dir.glob('/charts/*/values-prod.yaml').map { |f| File.basename(File.dirname(f)) }.sort
+verifie 'les charts à comparer sont exactement urbankiff et urbankiff-donnees',
+        (charts == %w[urbankiff urbankiff-donnees] ? [] : ["trouvés : #{charts.inspect}"])
+charts.each do |chart|
+  v = begin
+    Iso.ecarts_fichiers("/charts/#{chart}")
+  rescue StandardError => e
+    [e.message]
+  end
+  verifie "iso #{chart} : aucun écart non autorisé entre values-prod.yaml et values-preprod.yaml", v
+end
+%w[prod preprod].each do |env|
+  valeurs = begin
+    Iso.lis("/charts/urbankiff/values-#{env}.yaml")
+  rescue StandardError => e
+    warn e.message
+    {}
+  end
+  verifie "urbankiff : sms.actif vaut true dans values-#{env}.yaml", Iso.sms_actif?(valeurs) ? [] : ['sms.actif différent de true']
+end
 
 puts '== Quota de la preprod'
 docs = charge('preprod')
-regime = docs.sum do |d|
-  case d['kind']
-  when 'Deployment', 'StatefulSet'
-    (d['spec']['replicas'] || 1) * d['spec']['template']['spec']['containers'].sum { |c| mi(c.dig('resources', 'limits', 'memory')) }
-  when 'Cluster'
-    d['spec']['instances'] * mi(d.dig('spec', 'resources', 'limits', 'memory'))
-  else 0
-  end
+
+# Auto-test du calcul sur des documents en mémoire : un total au-dessus du quota échoue, en dessous passe.
+def deploiement(memoire_cle, valeur, replicas: 1, kind: 'Deployment')
+  { 'kind' => kind, 'metadata' => { 'name' => 'x' },
+    'spec' => { 'replicas' => replicas, 'template' => { 'spec' => { 'containers' => [{ 'resources' => { memoire_cle => { 'memory' => valeur } } }] } } } }
 end
-plus_gros_job = pods(docs).select { |_, _, _, k| %w[Job CronJob].include?(k) }.flat_map { |_, spec, _, _| conteneurs(spec).map { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
-# Mise à jour progressive : un pod de plus que le régime établi pendant le remplacement (maxSurge 1 par défaut).
-surplus = docs.select { |d| d['kind'] == 'Deployment' }.map { |d| d['spec']['template']['spec']['containers'].sum { |c| mi(c.dig('resources', 'limits', 'memory')) } }.max || 0
+{ 'requests' => QUOTA_REQUETES_PREPROD_MI, 'limits' => QUOTA_PREPROD_MI }.each do |cle, quota|
+  # StatefulSet : pas de surplus de mise à jour, le total vaut valeur + auxiliaire Barman.
+  juste_dessous = memoire_quota([deploiement(cle, "#{quota - AUXILIAIRE_BARMAN_MI}Mi", kind: 'StatefulSet')], cle)
+  juste_dessus = memoire_quota([deploiement(cle, "#{quota - AUXILIAIRE_BARMAN_MI + 1}Mi", kind: 'StatefulSet')], cle)
+  verifie "auto-test du calcul de quota (#{cle}) : #{quota} Mi passe, #{quota + 1} Mi échoue",
+          juste_dessous[:total] <= quota && juste_dessus[:total] > quota ? [] : ["dessous=#{juste_dessous[:total]} dessus=#{juste_dessus[:total]}"]
+end
+
+limites = memoire_quota(docs, 'limits')
+regime = limites[:regime]
+plus_gros_job = limites[:plus_gros_job]
+surplus = limites[:surplus]
 puts "limites en régime établi : #{regime} Mi ; auxiliaire Barman : #{AUXILIAIRE_BARMAN_MI} Mi ; pod de mise à jour : #{surplus} Mi ; plus gros Job : #{plus_gros_job} Mi ; quota : #{QUOTA_PREPROD_MI} Mi"
-total = regime + AUXILIAIRE_BARMAN_MI + surplus + plus_gros_job
+total = limites[:total]
 verifie 'preprod : régime établi, auxiliaire Barman, pod de mise à jour et plus gros Job sous le quota',
         total <= QUOTA_PREPROD_MI ? [] : ["#{total} Mi > #{QUOTA_PREPROD_MI} Mi"]
+
+requetes = memoire_quota(docs, 'requests')
+puts "requêtes en régime établi : #{requetes[:regime]} Mi ; auxiliaire Barman : #{AUXILIAIRE_BARMAN_MI} Mi ; pod de mise à jour : #{requetes[:surplus]} Mi ; plus gros Job : #{requetes[:plus_gros_job]} Mi ; quota de requêtes : #{QUOTA_REQUETES_PREPROD_MI} Mi"
+verifie 'preprod : requêtes mémoire (régime établi, auxiliaire Barman, pod de mise à jour, plus gros Job) sous le quota de requêtes',
+        requetes[:total] <= QUOTA_REQUETES_PREPROD_MI ? [] : ["#{requetes[:total]} Mi > #{QUOTA_REQUETES_PREPROD_MI} Mi"]
 
 # Marge assumée : le Job de migrations (crochet de déploiement) et le CronJob rclone (planifié la nuit) peuvent se
 # chevaucher exceptionnellement ; au-delà du quota, le pod du Job est refusé puis relancé (backoffLimit), et le CronJob

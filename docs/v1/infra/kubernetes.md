@@ -29,7 +29,7 @@ avant les deux charts.
 ## Contrats
 
 - Valeurs : `environnement` (`prod` ou `preprod`, sinon le rendu échoue), `image.etiquette` (version de la release,
-  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.active`, `restauration.prefixe`,
+  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.prefixe`, `restauration.fichierDump`,
   `wasabi.region` et `wasabi.bucket` (obligatoires, passées par `--set` par le script de déploiement, spec § 8.5 A5),
   `image.secretTirage` (facultatif, vide par défaut : paquets GHCR publics, A1), `hosts.{web,api,panel}`.
 - Images : api `ghcr.io/tigamadou/urbankiff-api:<version>` ; Next et panel `…-nextjs:<version>-<environnement>` et
@@ -168,14 +168,14 @@ suivantes sont posées par le chart et l'emportent sur `envFrom` :
 | `REDIS_PASSWORD` | clé `REDIS_PASSWORD` de `urbankiff-secrets` |
 | `REDIS_ENDPOINT` | construite : `redis://:$(REDIS_PASSWORD)@urbankiff-redis:6379/0` (déclarée après `REDIS_PASSWORD`) |
 | `MINIO_ENDPOINT` | construite : `urbankiff-rustfs:9000` (A4) |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | `sms.actif: true` : clés du Secret ; sinon valeur inerte `desactive` (A6) |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | clés du Secret (`sms.actif: true` en prod et en preprod) ; valeur inerte `desactive` seulement si `sms.actif` est faux (A6) |
 
 Autres lectures de `urbankiff-secrets` : `MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD` (RustFS, rclone), `REDIS_PASSWORD`
 (Redis), `WASABI_ACCESS_KEY_ID` et `WASABI_SECRET_ACCESS_KEY` (Barman Cloud, rclone). De `urbankiff-config` :
 `MINIO_DEFAULT_BUCKETS` (nom du bucket, Job de création et copies rclone). `POSTGRES_PASSWORD` n'est **pas** lu dans
 `urbankiff-secrets` (A3).
 
-`sms.actif: false` (preprod) ne neutralise que la variable d'environnement : le code de l'api n'est pas modifié.
+`sms.actif: false` (aucun environnement ne l'utilise) ne neutraliserait que la variable d'environnement : le code de l'api n'est pas modifié.
 
 ## Hibernation de la preprod
 
@@ -203,14 +203,76 @@ volumes et Secrets sont conservés.
   Le `Cluster` passe de `bootstrap.initdb` à `bootstrap.recovery` (`targetTime`, source `externalClusters` par le plugin
   Barman Cloud). `serveurSource` doit différer de `serveur` : sinon la nouvelle archive se mélange à l'ancienne. À
   utiliser sur un namespace dont le `Cluster` a été supprimé.
-- **Job de restauration d'une sauvegarde déposée** (`restauration.active: true`, § 5.10) : le Job `urbankiff-restauration`
-  est absent par défaut. Valeurs : `restauration.prefixe` (obligatoire, relatif à la racine du bucket, par exemple
-  `restauration/2026-12-01/`), `restauration.fichierDump` (défaut `base.dump`), `restauration.copierFichiers` (défaut vrai),
-  `restauration.purger` (défaut vrai). Trois temps : init-conteneur rclone (récupère le préfixe de Wasabi), init-conteneur
-  `pg_restore --no-owner --no-privileges --schema=public --dbname=…` (image PostgreSQL de `postgres.version`, mot de passe
-  du Secret `urbankiff-pg-app`), conteneur rclone (copie `fichiers/` vers RustFS, puis supprime le préfixe de Wasabi). Le Job
-  n'est pas un crochet et ne se rejoue pas : le supprimer avant de relancer. Format (A10) : `<préfixe>/base.dump` (format
-  custom de `pg_dump`) et `<préfixe>/fichiers/`.
+- **Job de restauration d'une sauvegarde déposée** : voir « Restauration et copie » ci-dessous (rendu à la demande,
+  remise à zéro du schéma `public`, aucune purge).
+
+## Restauration et copie
+
+Trois Jobs servent la restauration rejouable et la copie anonymisée de la prod vers la preprod (spec § 8). Aucun n'est
+rendu par un `helm upgrade` ordinaire : chacun est absent tant que sa valeur déclencheuse est vide, et le script de
+déploiement le rend à la demande, le crée, le suit puis le supprime. Aucun n'est un crochet Helm (`backoffLimit: 0`,
+`restartPolicy: Never`, durcissement identique aux autres Jobs).
+
+| Job | Chart | Rendu si | Journal de fin |
+|---|---|---|---|
+| `urbankiff-restauration` | `urbankiff-donnees` | `restauration.prefixe` non vide | `restauration terminée` |
+| `urbankiff-apres-restauration` | `urbankiff` | `apresRestauration.actif: true` | (état du Job) |
+| `urbankiff-export-anonyme` | `urbankiff` | `exportAnonyme.prefixe` et `exportAnonyme.bucketCible` non vides, `environnement: prod` | `export terminé` |
+
+Rendu à la demande, par exemple :
+
+```
+helm template urbankiff-donnees infra/helm/urbankiff-donnees -f infra/helm/urbankiff-donnees/values-preprod.yaml \
+  --show-only templates/restauration-job.yaml --set restauration.prefixe=restauration/2026-12-01/ …
+```
+
+### Restauration
+
+- Préfixe accepté : `^restauration/AAAA-MM-JJ(-prod-anonyme)?/?$` (le suffixe est celui de la copie anonymisée) ; tout autre
+  préfixe (espace, guillemet, `;`, `..`, `$`) fait échouer le rendu (`restauration.prefixe`).
+- Déroulé : `recuperer` (rclone copie le préfixe de Wasabi), `remise-a-zero` (`psql` avec `ON_ERROR_STOP` : contrôle que
+  l'utilisateur applicatif possède le schéma `public` via `pg_has_role(current_user, nspowner, 'USAGE')`, échec explicite sinon,
+  puis `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), `pg-restore` (`--no-owner --no-privileges --schema=public`),
+  puis le conteneur `fichiers` (copie `fichiers/` vers RustFS seulement si le dossier existe : une sauvegarde sans fichiers
+  est valide).
+- Aucune purge : rien n'est supprimé dans Wasabi, la sauvegarde y reste. Valeurs : `restauration.prefixe` (défaut vide),
+  `restauration.fichierDump` (défaut `base.dump`).
+- Écart au contrat : `restauration.active`, `restauration.purger` et `restauration.copierFichiers` n'existent plus (la copie
+  des fichiers est systématique quand `fichiers/` existe) ; le script de déploiement ne doit plus les passer.
+
+### Après restauration
+
+Une commande dans l'image de l'api : `python manage.py migrate && python manage.py reecrire_urls && python manage.py prodseed
+&& python manage.py clearcache` (pas de `loaddata` : les fixtures viennent du dump). Environnement identique à celui de
+l'api ; valeurs `apresRestauration.actif` et `apresRestauration.ressources` (128 Mi / 256 Mi).
+
+### Export anonymisé (prod uniquement)
+
+Les données réelles ne vivent que dans le pod. Déroulé : `pg-temp` (PostgreSQL temporaire en sidecar natif, `127.0.0.1`,
+`emptyDir`, mot de passe aléatoire dans le volume `travail`, UID 26 et groupe 10001 pour ce seul conteneur), `dump-source`
+(`pg_dump` de la base de prod, seul conteneur à lire `urbankiff-pg-app`), `restaurer-temp`, `anonymiser`
+(`ANONYMISATION_AUTORISEE=1`, `POSTGRES_HOST=127.0.0.1`, aucune référence à la base de prod), `lister-fichiers`
+(`lister_fichiers_publics` : une clé d'objet par ligne vers `/travail/fichiers.txt`, échec si la liste est vide),
+`dump-anonyme` (puis suppression du dump source), et le conteneur `deposer` (seul à recevoir les identifiants Wasabi) : dépôt
+de `base.dump` sous `<bucketCible>/<prefixe>` avec contrôle de taille, puis `rclone copy --files-from` des seuls fichiers
+listés vers `<prefixe>fichiers`, jamais le bucket entier, aucune suppression.
+
+- Les deux `pg_dump` portent `--schema=public` (symétrique de `pg_restore --schema=public`). `anonymiser` et `lister-fichiers`
+  ne reçoivent que la ConfigMap et des endpoints inertes (`MINIO_ENDPOINT`, `REDIS_ENDPOINT`), jamais le Secret ; un
+  sidecar `pg-temp` relancé ne refait pas `initdb`.
+- Préfixe accepté : `restauration/AAAA-MM-JJ-prod-anonyme/` ; `bucketCible` : `^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`. Le rendu
+  hors `prod` échoue (le rendu preprod sans valeurs d'export reste vide).
+- Valeurs : `exportAnonyme.{prefixe,bucketCible,versionPostgres,tailleTravail,ressources,pgTemp.ressources}`,
+  `image.postgres`, `image.rclone`, `wasabi.region` (obligatoire : le script doit passer `--set wasabi.region=…` au rendu) et
+  `wasabi.endpoint`.
+
+### Réseau et quota
+
+- Les NetworkPolicies existantes sont réutilisées par le libellé de composant du pod : `urbankiff-apres-restauration` porte
+  `component: migrations`, `urbankiff-export-anonyme` porte `component: restauration` (les Jobs eux-mêmes gardent leur
+  composant). Aucune NetworkPolicy n'a été ajoutée.
+- Les Jobs tournent application arrêtée ; aucun conteneur ne dépasse 256 Mi de limite mémoire, le plus gros conteneur compté
+  pour le quota de la preprod reste inchangé.
 
 ## Utilisation de `make helm-*`
 
@@ -230,6 +292,46 @@ Toutes les cibles lancent des conteneurs aux versions épinglées (`make/helm.mk
 
 Les cibles de rendu passent des valeurs de test (`ETIQUETTE`, `WASABI_REGION`, `WASABI_BUCKET`, sans secret) ; les
 valeurs réelles viennent du script de déploiement.
+
+## Outils web
+
+Usage et DNS : voir [outils-donnees.md](outils-donnees.md).
+
+- **Deployment `urbankiff-pgadmin`** (composant `pgadmin`, `part-of: urbankiff`, une réplique, stratégie `Recreate`) avec
+  la ConfigMap `urbankiff-pgadmin-config` et le Service `urbankiff-pgadmin` (port 8080). Identifiants par `secretKeyRef`
+  (`PGADMIN_EMAIL`, `PGADMIN_MOT_DE_PASSE`).
+- **Console RustFS** : port `console` (9001) du StatefulSet `urbankiff-rustfs`, exposé par le Service existant ; le S3
+  (9000) reste interne.
+- **Ingress** `urbankiff-pgadmin` (`hosts.db`) et `urbankiff-stockage` (`hosts.stockage`) : cert-manager, classe Traefik,
+  deux Middlewares `traefik.io/v1alpha1` (`urbankiff-outils-limite-debit`, `urbankiff-outils-entetes`) appelés par
+  l'annotation `router.middlewares`. Le rôle `deploy` doit pouvoir gérer les `middlewares` (lot Ansible).
+- **NetworkPolicies** (`reseau-outils.yaml`, additives) : `pgadmin-entree` et `stockage-console-entree` (Traefik de
+  `kube-system` seulement), `pgadmin-sortie` (PostgreSQL 5432 seulement, aucune sortie Internet),
+  `postgres-entree-pgadmin` (entrée de PostgreSQL depuis pgAdmin).
+- **Quota preprod** : régime établi 2 048 Mi de limites sur 3 072 Mi (pgAdmin 320 Mi), pire chevauchement 2 432 Mi,
+  requêtes 1 520 Mi sur 1 536 Mi (régime établi 936, Barman 256, pod de mise à jour 200, plus gros Job 128 ; pgAdmin
+  96 Mi), contrôlées par `controle.rb`.
+- **Schéma kubeconform** du Middleware : `infra/helm/schemas/traefik.io/middleware_v1alpha1.json`.
+
+## Iso preprod / prod
+
+La preprod est iso à la prod : mêmes valeurs, mêmes secrets, seule la taille (mémoire) et les noms d'hôtes changent
+(spec § 5.1).
+
+- **Écarts autorisés**, exactement : `environnement`, `hosts.*` (dont `hosts.db` et `hosts.stockage` du chart des
+  données) et toute clé sous un segment `ressources` (`*.ressources.*`). Tout autre écart entre `values-prod.yaml` et
+  `values-preprod.yaml`, clé présente d'un seul côté comprise, fait échouer le contrôle.
+- **Où vit le contrôle** : `infra/helm/tests-transverses/controle.rb` et `iso.rb` (liste des écarts autorisés en un seul
+  endroit), auto-test `iso-test.rb` ; lancé par `make helm-test` et `make helm-controle`. Les deux charts
+  (`urbankiff` et `urbankiff-donnees`) sont comparés ; un chart oublié ou un fichier de valeurs absent ou illisible
+  fait échouer.
+- **Rendre le contrôle vert** : aligner la valeur de la preprod sur celle de la prod. Ajouter un écart autorisé demande
+  de modifier le contrat de la spec puis `iso.rb`, jamais d'assouplir le test.
+- **SMS** : `sms.actif: true` dans les deux environnements ; la preprod utilise le compte Twilio de la prod et envoie de
+  vrais SMS. Le contrôle exige les références `secretKeyRef` en prod et en preprod et refuse toute valeur inerte.
+- **Variables** : les ensembles de clés de `variables-prod.txt` et `variables-preprod.txt` sont égaux (`make secrets-test`).
+- **Mémoire et quota** : non alignés sur la prod (décision du développeur). Le quota de la preprod est contrôlé en
+  limites (3 072 Mi) et en requêtes (1 536 Mi) avec le même calcul.
 
 ## Points laissés aux lots voisins
 

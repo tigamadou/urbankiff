@@ -1,0 +1,97 @@
+suite: apres restauration
+templates:
+  - templates/apres-restauration-job.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: absent par défaut
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: Job rendu à la demande, sans crochet
+    set:
+      apresRestauration.actif: true
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: urbankiff-apres-restauration
+      - notExists:
+          path: metadata.annotations["helm.sh/hook"]
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: apres-restauration
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.backoffLimit
+          value: 0
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 1800
+  - it: commande exacte du contrat
+    set:
+      apresRestauration.actif: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - sh
+            - -c
+            - python manage.py migrate && python manage.py reecrire_urls && python manage.py prodseed && python manage.py clearcache
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/tigamadou/urbankiff-api:1.2.3
+  - it: même environnement que l'api
+    set:
+      apresRestauration.actif: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: urbankiff-secrets
+            - configMapRef:
+                name: urbankiff-config
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TWILIO_ACCOUNT_SID
+            value: desactive
+  - it: durcissement, limites, volume tmp
+    set:
+      apresRestauration.actif: true
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 256Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 128Mi
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}

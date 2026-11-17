@@ -1,0 +1,80 @@
+{{- $env := include "urbankiff.environnement" . -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pgadmin-entree
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "pgadmin" | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - {{- include "urbankiff.origineTraefik" . | nindent 10 }}
+      ports:
+        - port: {{ .Values.pgadmin.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stockage-console-entree
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "rustfs" | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - {{- include "urbankiff.origineTraefik" . | nindent 10 }}
+      ports:
+        - port: {{ .Values.rustfs.console.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pgadmin-sortie
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "urbankiff.selecteur" "pgadmin" | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: urbankiff-pg
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-entree-pgadmin
+  labels:
+    app.kubernetes.io/part-of: urbankiff
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: urbankiff-pg
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "urbankiff.selecteur" "pgadmin" | nindent 14 }}
+      ports:
+        - port: 5432
+          protocol: TCP

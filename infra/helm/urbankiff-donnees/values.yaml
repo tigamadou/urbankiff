@@ -79,6 +79,33 @@ rustfs:
       memory: 64Mi
     limits:
       memory: 192Mi
+  # console web (port 9001) servie par le même pod ; le S3 (9000) reste interne
+  console:
+    actif: true
+    port: 9001
+
+# Hôtes des outils web : fournis par values-<env>.yaml
+hosts:
+  db: ""
+  stockage: ""
+
+ingress:
+  classe: traefik
+  clusterIssuer: letsencrypt
+  limiteDebit:
+    moyenne: 20
+    rafale: 50
+  hsts:
+    secondes: 31536000
+
+pgadmin:
+  image: dpage/pgadmin4:9.9.0
+  port: 8080
+  ressources:
+    requests:
+      memory: 96Mi
+    limits:
+      memory: 320Mi
 
 # Jobs et CronJobs rclone (bucket, copie des fichiers, restauration)
 outils:
@@ -91,12 +118,11 @@ outils:
 sauvegardeFichiers:
   planification: "30 3 * * *"
 
-# Job de restauration d'une sauvegarde déposée sous restauration/<date>/ du bucket Wasabi (spec § 5.10) :
-# absent par défaut, rendu seulement avec active: true
+# Job de restauration d'une sauvegarde déposée sous restauration/<date>/ du bucket Wasabi (spec § 5.10, § 8.3) :
+# absent par défaut, rendu à la demande par l'action restaurer du script de déploiement
+# (helm template --show-only templates/restauration-job.yaml --set restauration.prefixe=...).
+# Remise à zéro du schéma public puis pg_restore ; aucune purge, la sauvegarde reste dans Wasabi.
 restauration:
-  active: false
-  # chemin relatif à la racine du bucket, par exemple restauration/2026-12-01/ (obligatoire si active)
+  # restauration/AAAA-MM-JJ/ ou restauration/AAAA-MM-JJ-prod-anonyme/ (vide : Job absent)
   prefixe: ""
   fichierDump: base.dump
-  copierFichiers: true
-  purger: true

@@ -1,6 +1,9 @@
-{{- if .Values.restauration.active -}}
+{{- if .Values.restauration.prefixe -}}
 {{- $env := include "urbankiff.environnement" . -}}
-{{- $prefixe := trimSuffix "/" (required "restauration.prefixe est obligatoire quand restauration.active est vrai (par exemple restauration/2026-12-01/)" .Values.restauration.prefixe) -}}
+{{- if not (regexMatch "^restauration/[0-9]{4}-[0-9]{2}-[0-9]{2}(-prod-anonyme)?/?$" .Values.restauration.prefixe) -}}
+{{- fail "restauration.prefixe doit valoir restauration/AAAA-MM-JJ/ ou restauration/AAAA-MM-JJ-prod-anonyme/" -}}
+{{- end -}}
+{{- $prefixe := trimSuffix "/" .Values.restauration.prefixe -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -38,6 +41,52 @@ spec:
               mountPath: /tmp
             - name: restauration
               mountPath: /restauration
+        - name: remise-a-zero
+          image: {{ printf "%s:%d" .Values.image.postgres (int .Values.postgres.version) }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              psql -v ON_ERROR_STOP=1 <<'SQL'
+              DO $verif$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'public' AND pg_has_role(current_user, nspowner, 'USAGE')) THEN
+                  RAISE EXCEPTION 'le schéma public n''appartient pas à l''utilisateur applicatif : remise à zéro impossible';
+                END IF;
+              END
+              $verif$;
+              DROP SCHEMA public CASCADE;
+              CREATE SCHEMA public;
+              SQL
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PGHOST
+              value: urbankiff-pg-rw
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: password
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: urbankiff-pg-app
+                  key: dbname
+          resources:
+            {{- toYaml .Values.outils.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
         - name: pg-restore
           image: {{ printf "%s:%d" .Values.image.postgres (int .Values.postgres.version) }}
           command: ["pg_restore", "--no-owner", "--no-privileges", "--schema=public", "--dbname=$(PGDATABASE)", "/restauration/{{ .Values.restauration.fichierDump }}"]
@@ -79,12 +128,11 @@ spec:
           args:
             - |
               set -e
-              {{- if .Values.restauration.copierFichiers }}
-              rclone copy /restauration/fichiers "rustfs:$BUCKET"
-              {{- end }}
-              {{- if .Values.restauration.purger }}
-              rclone purge "wasabi:$WASABI_BUCKET/{{ $prefixe }}"
-              {{- end }}
+              if [ -d /restauration/fichiers ]; then
+                rclone copy /restauration/fichiers "rustfs:$BUCKET"
+              else
+                echo "sauvegarde sans fichiers : rien à copier"
+              fi
               echo restauration terminée
           env:
             - name: HOME
@@ -94,10 +142,7 @@ spec:
                 configMapKeyRef:
                   name: urbankiff-config
                   key: MINIO_DEFAULT_BUCKETS
-            - name: WASABI_BUCKET
-              value: {{ include "urbankiff.wasabiBucket" . }}
             {{- include "urbankiff.rcloneRustfsEnv" . | nindent 12 }}
-            {{- include "urbankiff.rcloneWasabiEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.outils.ressources | nindent 12 }}
           securityContext:

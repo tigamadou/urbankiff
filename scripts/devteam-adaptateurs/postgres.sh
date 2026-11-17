@@ -10,6 +10,8 @@ SERVICE="${DEVTEAM_PG_SERVICE:-postgres}"
 UTILISATEUR="${DEVTEAM_PG_USER:-}"
 
 case "$action" in variables | creer | liberer) ;; *) echo "Usage : $0 variables|creer|liberer <lot> <nom de base>" >&2; exit 2 ;; esac
+# Les noms de lot ont des tirets (outils-web) ; PostgreSQL n'en veut pas sans guillemets : tiret -> _.
+nom="${nom//-/_}"
 [[ "$nom" =~ ^[a-z0-9_]{1,63}$ ]] || { echo "postgres : nom de base invalide « $nom » (a-z, 0-9, _ ; 63 caractères au plus)" >&2; exit 1; }
 
 conteneur() {

@@ -1,17 +1,20 @@
 #!/usr/bin/env bats
 # Les listes de clés du script suivent l'inventaire du dépôt (scripts/secrets, lecture seule).
 
+load aide
+
 setup() {
   SCRIPT="$BATS_TEST_DIRNAME/../urbankiff-deploy.sh"
   SECRETS="$BATS_TEST_DIRNAME/../../../scripts/secrets"
   # shellcheck disable=SC1090
   source <(sed -n '/^# cles:debut/,/^# cles:fin/p' "$SCRIPT")
+  SECRET_KEYS="$(echo $SECRET_KEYS)"
 }
 
 noms() { grep -vE '^(#|$)' "$1" | sed -E 's/[ =].*//' | sort -u | tr '\n' ' '; }
 trie() { tr ' ' '\n' <<< "$1" | grep -v '^$' | sort -u | tr '\n' ' '; }
 
-@test "SECRET_KEYS = scripts/secrets/secrets.txt" {
+@test "SECRET_KEYS = noms de scripts/secrets/secrets.txt (égalité stricte)" {
   [ "$(trie "$SECRET_KEYS")" = "$(noms "$SECRETS/secrets.txt")" ]
 }
 

@@ -27,6 +27,10 @@ spec:
           ports:
             - name: s3
               containerPort: 9000
+            {{- if .Values.rustfs.console.actif }}
+            - name: console
+              containerPort: {{ .Values.rustfs.console.port }}
+            {{- end }}
           env:
             - name: RUSTFS_ACCESS_KEY
               valueFrom:
@@ -39,7 +43,11 @@ spec:
                   name: {{ .Values.secretName }}
                   key: MINIO_ROOT_PASSWORD
             - name: RUSTFS_CONSOLE_ENABLE
-              value: "false"
+              value: {{ .Values.rustfs.console.actif | quote }}
+            {{- if .Values.rustfs.console.actif }}
+            - name: RUSTFS_CONSOLE_ADDRESS
+              value: 0.0.0.0:{{ .Values.rustfs.console.port }}
+            {{- end }}
             - name: RUSTFS_ADDRESS
               value: 0.0.0.0:9000
             - name: RUSTFS_VOLUMES
@@ -95,3 +103,8 @@ spec:
     - name: s3
       port: 9000
       targetPort: s3
+    {{- if .Values.rustfs.console.actif }}
+    - name: console
+      port: {{ .Values.rustfs.console.port }}
+      targetPort: console
+    {{- end }}

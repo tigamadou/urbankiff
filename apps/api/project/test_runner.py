@@ -12,7 +12,8 @@ class AgentLotTestRunner(DiscoverRunner):
         lot = os.environ.get('AGENT_LOT')
         if not lot:
             return
-        expected = f'urbankiff_{lot}'
+        # Même règle que scripts/devteam-adaptateurs/postgres.sh : tiret du lot -> _ dans le nom de base.
+        expected = f"urbankiff_{lot.replace('-', '_')}"
         found = settings.DATABASES['default']['NAME']
         if found != expected:
             raise ImproperlyConfigured(
