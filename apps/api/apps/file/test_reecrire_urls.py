@@ -7,8 +7,14 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
+from apps.banner.models import Campaign, Media
 from apps.category.models import Category
+from apps.file.management.commands.reecrire_urls import COLONNES
+from apps.file.models import File
+from apps.menu.models import Menu
+from apps.page.models import Page
 from apps.post.models import Post
+from apps.scrapper.models import Scrapper
 from apps.user.factories import UserFactory
 
 SOURCE = 'https://api.urbankiff.com/file'
@@ -81,3 +87,137 @@ class ChargementReglesTests(ReglesTestCase):
     def test_liste_vide(self):
         sortie, erreur = self.lancer(self.ecrire_regles([]))
         self.assertEqual(erreur, '')
+
+
+def ligne(colonne, n):
+    return 'reecrire_urls : %s : %d ligne(s)' % (colonne, n)
+
+
+class DonneesTestCase(ReglesTestCase):
+    def setUp(self):
+        self.user = UserFactory(email='u@example.org')
+        self.categorie = Category.objects.create(name='c', color='red')
+        self.campagne = Campaign.objects.create(uuid='camp')
+
+    def post(self, **kw):
+        valeurs = dict(title='t', intro='i', content='c', url='u', image='',
+                       author=self.user, category=self.categorie)
+        valeurs.update(kw)
+        return Post.objects.create(**valeurs)
+
+    def scrapper(self, **kw):
+        valeurs = dict(title='t%d' % Scrapper.objects.count(), date='2024-01-01',
+                       content='c', image='', website='w', link='l', language='en')
+        valeurs.update(kw)
+        return Scrapper.objects.create(**valeurs)
+
+    def media(self, **kw):
+        valeurs = dict(campaign=self.campagne, type='picture', file='', device='desktop')
+        valeurs.update(kw)
+        return Media.objects.create(**valeurs)
+
+    def fichier(self, **kw):
+        valeurs = dict(owner=self.user, name='n', mime_type='image/png')
+        valeurs.update(kw)
+        return File.objects.create(**valeurs)
+
+
+@override_settings(FILES_CDN_ENDPOINT=CIBLE)
+class ModePrefixeTests(DonneesTestCase):
+    def verifier(self, objet, champ):
+        setattr(objet, champ, SOURCE + '/x.jpg')
+        objet.save()
+        self.lancer()
+        objet.refresh_from_db()
+        self.assertEqual(getattr(objet, champ), CIBLE + '/x.jpg')
+
+    def test_file_url(self):
+        self.verifier(self.fichier(), 'url')
+
+    def test_post_image(self):
+        self.verifier(self.post(), 'image')
+
+    def test_post_audio(self):
+        self.verifier(self.post(), 'audio')
+
+    def test_post_video(self):
+        self.verifier(self.post(), 'video')
+
+    def test_media_file(self):
+        self.verifier(self.media(), 'file')
+
+    def test_scrapper_image(self):
+        self.verifier(self.scrapper(), 'image')
+
+    def test_user_id_img(self):
+        self.verifier(self.user, 'id_img')
+
+    def test_journal_et_decomptes(self):
+        self.post(image=SOURCE + '/a.jpg')
+        self.post(image=SOURCE + '/b.jpg')
+        self.fichier(url=SOURCE + '/c.jpg')
+        sortie, _ = self.lancer()
+        lignes = sortie.splitlines()
+        attendues = {'post_post.image': 2, 'file_file.url': 1}
+        for table_colonne in (
+                'file_file.url', 'post_post.image', 'post_post.audio', 'post_post.video',
+                'banner_media.file', 'scrapper_scrapper.image', 'user_user.id_img',
+                'post_post.content', 'post_post.intro', 'page_page.content',
+                'scrapper_scrapper.content'):
+            self.assertIn(ligne(table_colonne, attendues.get(table_colonne, 0)), lignes)
+        self.assertEqual(len(lignes), len(COLONNES))
+
+    def test_idempotence(self):
+        post = self.post(image=SOURCE + '/a.jpg')
+        self.lancer()
+        sortie, _ = self.lancer()
+        post.refresh_from_db()
+        self.assertEqual(post.image, CIBLE + '/a.jpg')
+        self.assertIn(ligne('post_post.image', 0), sortie)
+        self.assertNotRegex(sortie, r': [1-9]\d* ligne')
+
+    def test_cible_egale_source(self):
+        post = self.post(image=SOURCE + '/a.jpg')
+        with override_settings(FILES_CDN_ENDPOINT=SOURCE):
+            sortie, _ = self.lancer()
+        post.refresh_from_db()
+        self.assertEqual(post.image, SOURCE + '/a.jpg')
+        self.assertNotRegex(sortie, r': [1-9]\d* ligne')
+
+    def test_valeurs_intactes(self):
+        externe = self.post(image='https://exemple.org/x.jpg')
+        vide = self.post(image='')
+        nul = self.post(image='x', audio=None, video=None)
+        deja = self.post(image=CIBLE + '/x.jpg')
+        exclues = self.post(url=SOURCE + '/p', image='x')
+        media = self.media(file='x', url=SOURCE + '/clic')
+        scrapper = self.scrapper(link=SOURCE + '/l', website=SOURCE + '/w', image='x')
+        menu = Menu.objects.create(name='m', url=SOURCE + '/m')
+        self.user.id_img = None
+        self.user.save()
+        self.lancer()
+        for objet, champ, valeur in (
+                (externe, 'image', 'https://exemple.org/x.jpg'), (vide, 'image', ''),
+                (nul, 'audio', None), (nul, 'video', None), (deja, 'image', CIBLE + '/x.jpg'),
+                (exclues, 'url', SOURCE + '/p'), (media, 'url', SOURCE + '/clic'),
+                (scrapper, 'link', SOURCE + '/l'), (scrapper, 'website', SOURCE + '/w'),
+                (menu, 'url', SOURCE + '/m'), (self.user, 'id_img', None)):
+            objet.refresh_from_db()
+            self.assertEqual(getattr(objet, champ), valeur)
+
+    def test_updated_at_conserve(self):
+        post = self.post(image=SOURCE + '/a.jpg')
+        avant = Post.objects.get(pk=post.pk).updated_at
+        self.lancer()
+        self.assertEqual(Post.objects.get(pk=post.pk).updated_at, avant)
+
+    def test_deux_regles(self):
+        un = self.post(image=SOURCE + '/a.jpg')
+        deux = self.post(image='https://ancien.example/file/b.jpg')
+        regles = self.ecrire_regles([{'source': SOURCE}, {'source': 'https://ancien.example/file/'}])
+        sortie, _ = self.lancer(regles)
+        un.refresh_from_db()
+        deux.refresh_from_db()
+        self.assertEqual(un.image, CIBLE + '/a.jpg')
+        self.assertEqual(deux.image, CIBLE + '/b.jpg')
+        self.assertIn(ligne('post_post.image', 2), sortie)

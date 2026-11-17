@@ -1,8 +1,11 @@
 import json
 import os
 
+from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db import models, transaction
+from django.db.models.functions import Concat, Substr
 
 REGLES_PAR_DEFAUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -68,7 +71,30 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         cible = lire_cible()
         sources = charger_regles(options['regles'])
-        return self.reecrire(sources, cible)
+        decomptes = self.reecrire(sources, cible)
+        for modele, champ, _ in COLONNES:
+            etiquette = '%s.%s' % (
+                apps.get_model(modele)._meta.db_table, champ)
+            self.stdout.write('reecrire_urls : %s : %d ligne(s)' % (
+                etiquette, decomptes[(modele, champ)]))
 
     def reecrire(self, sources, cible):
-        pass
+        decomptes = {(modele, champ): 0 for modele, champ, _ in COLONNES}
+        with transaction.atomic():
+            for source in sources:
+                for modele, champ, mode in COLONNES:
+                    if mode != PREFIXE:
+                        continue
+                    queryset = apps.get_model(modele).objects.all()
+                    decomptes[(modele, champ)] += self.reecrire_prefixe(
+                        queryset, champ, source, cible)
+        return decomptes
+
+    def reecrire_prefixe(self, queryset, champ, source, cible):
+        a_reecrire = queryset.filter(**{champ + '__startswith': source + '/'}).exclude(
+            **{champ + '__startswith': cible + '/'})
+        nouvelle_valeur = Concat(
+            models.Value(cible + '/', output_field=models.CharField()),
+            Substr(champ, len(source) + 2),
+            output_field=models.CharField())
+        return a_reecrire.update(**{champ: nouvelle_valeur})
