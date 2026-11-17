@@ -161,6 +161,8 @@ lire_cluster() {
     [[ "$ligne" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] && VARIABLE_VAL[${BASH_REMATCH[1]}]="${BASH_REMATCH[2]}"
   done <<< "$sortie"
   unset sortie ligne
+  [ -n "${SECRET_B64[PGADMIN_EMAIL]:-}" ] && [ -n "${SECRET_B64[PGADMIN_MOT_DE_PASSE]:-}" ] \
+    || die "Secret incomplet : relancer make secrets-cluster"
   valider_entree
 }
 
@@ -190,7 +192,14 @@ preparer_secrets() {
 }
 
 TMP=""
-nettoyer() { [ -z "$TMP" ] || rm -rf "$TMP"; }
+APP_ARRETEE=0
+nettoyer() {
+  local statut=$?
+  [ -z "$TMP" ] || rm -rf "$TMP"
+  if [ "$statut" -ne 0 ] && [ "$APP_ARRETEE" = 1 ]; then
+    log "l'application reste arrêtée : la base peut être à moitié restaurée, corriger puis relancer la même commande"
+  fi
+}
 
 telecharger_charts() {
   local chart
@@ -334,7 +343,40 @@ suivre_job() { # <nom> <journal de fin, vide si non exigé> : le Job d'un échec
   die "le Job $nom n'est pas terminé après le délai : conservé pour l'enquête"
 }
 
-cmd_restaurer() { log "restauration de $PREFIXE"; }
+controler_prefixe() {
+  local identifiant secret
+  identifiant="$(base64 -d <<< "${SECRET_B64[WASABI_ACCESS_KEY_ID]}")"
+  secret="$(base64 -d <<< "${SECRET_B64[WASABI_SECRET_ACCESS_KEY]}")"
+  # Les identifiants passent par l'entrée standard de curl (-K -), jamais par un argument.
+  printf 'user = "%s:%s"\n' "$identifiant" "$secret" | curl -fsS --max-time 20 --head --aws-sigv4 "aws:amz:$WASABI_REGION:s3" -K - \
+    "https://s3.$WASABI_REGION.wasabisys.com/$WASABI_BUCKET/${PREFIXE}base.dump" > /dev/null \
+    || { unset identifiant secret; die "préfixe introuvable dans le bucket $WASABI_BUCKET : ${PREFIXE}base.dump"; }
+  unset identifiant secret
+  kubectl wait "$CLUSTER_PG" -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
+    || die "CloudNativePG n'est pas prêt : rien n'est arrêté"
+}
+
+cmd_restaurer() {
+  lire_cluster
+  calculer_empreinte
+  controler_prefixe
+  version_deployee
+  telecharger_charts
+  APP_ARRETEE=1
+  mettre_a_zero deployment
+  rendre_job urbankiff-donnees urbankiff-donnees restauration-job.yaml --set "restauration.prefixe=$PREFIXE"
+  lancer_job urbankiff-restauration
+  suivre_job urbankiff-restauration "restauration terminée"
+  rendre_job urbankiff urbankiff apres-restauration-job.yaml --set "apresRestauration.actif=true"
+  lancer_job urbankiff-apres-restauration
+  suivre_job urbankiff-apres-restauration ""
+  remettre_a_lechelle deployment
+  APP_ARRETEE=0
+  kubectl wait deployment -l "$LABEL_APPLICATION" -n "$NAMESPACE" --for=condition=Available --timeout=600s \
+    || die "l'application ne redevient pas disponible"
+  verifier_sante
+  log "restauration terminée : $PREFIXE"
+}
 cmd_exporter_anonyme() { log "export anonymisé du $DATE_EXPORT"; }
 
 main() {

@@ -8,3 +8,6 @@ noms_secrets_complets() {
     tr ' ' '\n' <<< "$CLES_CONTRAT"
   } | grep -v '^$' | awk '!vu[$0]++'
 }
+
+# `! grep` au milieu d'un test ne le fait pas échouer (errexit ignore la négation) : absent() échoue si grep trouve.
+absent() { ! grep "$@"; }

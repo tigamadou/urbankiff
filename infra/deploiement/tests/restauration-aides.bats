@@ -2,6 +2,8 @@
 # Aides communes de restaurer et exporter-anonyme : version déployée, rendu, lancement et suivi d'un Job.
 # Les fonctions sont appelées par une commande minimale du script, avec de faux helm et kubectl.
 
+load aide
+
 setup() {
   SCRIPT="$BATS_TEST_DIRNAME/../urbankiff-deploy.sh"
   export PATH="$BATS_TEST_DIRNAME/fakes:$PATH"
@@ -71,7 +73,7 @@ appeler() { # <fonction> [args] : exécutée dans un sous-shell qui a chargé le
   appeler rendre_job urbankiff-donnees urbankiff-donnees restauration-job.yaml
   [ "$status" -eq 1 ]
   [[ "$output" == *"le Job n'est pas rendu"* ]]
-  ! grep -q '^kubectl apply' "$FAKE_LOG"
+  absent -q '^kubectl apply' "$FAKE_LOG"
 }
 
 @test "lancer_job : supprime d'abord un Job homonyme, puis crée par apply" {
@@ -106,7 +108,7 @@ appeler() { # <fonction> [args] : exécutée dans un sous-shell qui a chargé le
   appeler suivre_job urbankiff-restauration "restauration terminée"
   [ "$status" -eq 1 ]
   [[ "$output" == *"restauration terminée"* ]]
-  ! grep -q '^kubectl delete' "$FAKE_LOG"
+  absent -q '^kubectl delete' "$FAKE_LOG"
 }
 
 @test "suivre_job : échec : journaux affichés, erreur, Job conservé" {
@@ -116,7 +118,7 @@ appeler() { # <fonction> [args] : exécutée dans un sous-shell qui a chargé le
   [ "$status" -eq 1 ]
   [[ "$output" == *"pg_restore : boum"* ]]
   [[ "$output" == *"a échoué"* ]]
-  ! grep -q '^kubectl delete' "$FAKE_LOG"
+  absent -q '^kubectl delete' "$FAKE_LOG"
 }
 
 @test "suivre_job : délai dépassé après URBANKIFF_JOB_TENTATIVES, Job conservé" {
@@ -125,5 +127,5 @@ appeler() { # <fonction> [args] : exécutée dans un sous-shell qui a chargé le
   [[ "$output" == *"après le délai"* ]]
   [ "$(grep -c '^kubectl get job' "$FAKE_LOG")" -eq 3 ]
   [ "$(grep -c '^sleep 5$' "$FAKE_LOG")" -eq 3 ]
-  ! grep -q '^kubectl delete' "$FAKE_LOG"
+  absent -q '^kubectl delete' "$FAKE_LOG"
 }

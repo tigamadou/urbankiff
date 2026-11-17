@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 # Commandes restaurer et exporter-anonyme : analyse, refus, configuration, verrou (urbankiff-deploy.sh).
 
+load aide
+
 setup() {
   SCRIPT="$BATS_TEST_DIRNAME/../urbankiff-deploy.sh"
   export PATH="$BATS_TEST_DIRNAME/fakes:$PATH"
@@ -42,15 +44,17 @@ lancer() { # <env> <commande>
 
 @test "restaurer : préfixe accepté dans les deux formes, en preprod" {
   lancer preprod "restaurer restauration/2026-11-17/"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"restaurer"* ]]
+  [ "$status" -ne 2 ]
+  [[ "$output" == *"commande restaurer"* ]]
   lancer preprod "restaurer restauration/2026-11-17-prod-anonyme/"
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 2 ]
+  [[ "$output" == *"commande restaurer"* ]]
 }
 
 @test "restaurer : préfixe de prod accepté en prod" {
   lancer prod "restaurer restauration/2026-11-17/"
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 2 ]
+  [[ "$output" == *"commande restaurer"* ]]
 }
 
 @test "restaurer d'un préfixe anonymisé en prod : refusé (code 2) avant tout appel" {
@@ -100,7 +104,8 @@ lancer() { # <env> <commande>
   lancer prod "deploy 1.2.3"
   [[ "$output" == *"version 1.2.3"* ]]
   lancer prod "restaurer restauration/2026-11-17/"
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 2 ]
+  [[ "$output" == *"commande restaurer"* ]]
   : > "$FAKE_LOG"
   lancer prod "exporter-anonyme 2026-11-17"
   [ "$status" -eq 1 ]
