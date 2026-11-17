@@ -39,19 +39,19 @@ autorité). Plan de la mission `outils-donnees`, lot 4 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
-- [ ] **Tâche 1** Job de restauration : remise à zéro du schéma, sans purge, rendu à la demande · `feature/outils-donnees-jobs-donnees`
-  - [ ] tests `restauration_test.yaml` réécrits (échec attendu)
-  - [ ] `restauration-job.yaml` et section `restauration` de `values.yaml`
-- [ ] **Tâche 2** Job après restauration (chart `urbankiff`)
-  - [ ] tests `apres_restauration_test.yaml`
-  - [ ] `apres-restauration-job.yaml` et valeurs `apresRestauration`
-- [ ] **Tâche 3** Job d'export anonymisé (chart `urbankiff`)
-  - [ ] tests `export_anonyme_test.yaml`
-  - [ ] `export-anonyme-job.yaml` et valeurs `exportAnonyme`, `image.postgres`, `wasabi`
-- [ ] **Tâche 4** Documentation : section « Restauration et copie » de `kubernetes.md`
-- [ ] **Tâche 5** Vérification du lot
+- [x] **Tâche 1** Job de restauration : remise à zéro du schéma, sans purge, rendu à la demande · `feature/outils-donnees-jobs-donnees`
+  - [x] tests `restauration_test.yaml` réécrits (échec attendu)
+  - [x] `restauration-job.yaml` et section `restauration` de `values.yaml`
+- [x] **Tâche 2** Job après restauration (chart `urbankiff`)
+  - [x] tests `apres_restauration_test.yaml`
+  - [x] `apres-restauration-job.yaml` et valeurs `apresRestauration`
+- [x] **Tâche 3** Job d'export anonymisé (chart `urbankiff`)
+  - [x] tests `export_anonyme_test.yaml`
+  - [x] `export-anonyme-job.yaml` et valeurs `exportAnonyme`, `image.postgres`, `wasabi`
+- [x] **Tâche 4** Documentation : section « Restauration et copie » de `kubernetes.md`
+- [x] **Tâche 5** Vérification du lot
 
 > Reprise : (vide)
 
@@ -317,3 +317,12 @@ Structure du pod (ordre des initContainers, vérifié par les tests ; ordre : `p
 - [ ] Rapport final : `Statut: DONE|PARTIAL|BLOCKED`, tâches, commits, commandes et résultats, points à signaler (dont ce qui ne
   se vérifie que sur le cluster réel après la PR finale : `initdb` en UID 26 avec système de fichiers en lecture seule, remise à zéro du
   schéma par l'utilisateur applicatif de CloudNativePG).
+
+## Écarts au plan
+
+- **`pg_dump --schema=public`** (conteneurs `dump-source` et `dump-anonyme`) : symétrique du `pg_restore --schema=public` de la
+  restauration (arbitrage du lead dev, issue #65). Aucune extension ni objet hors `public` n'est requis par l'application
+  (aucune migration ne crée d'extension, grep fait à la reprise).
+- **`anonymiser` et `lister-fichiers`** : `configMapRef` seul (pas de `secretRef`), avec `MINIO_ENDPOINT` et `REDIS_ENDPOINT`
+  inertes (jamais contactés) car `minio_service.py` instancie le client à l'import. Seul `deposer` reçoit les identifiants Wasabi.
+- **`pg-temp`** : `initdb` et la génération du mot de passe sont sautés si `PG_VERSION` existe déjà (sidecar relancé).

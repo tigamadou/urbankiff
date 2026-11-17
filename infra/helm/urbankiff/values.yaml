@@ -14,6 +14,14 @@ image:
   etiquette: ""
   # Secret de tirage d'images, facultatif (paquets GHCR publics par défaut, spec § 8.5, A1)
   secretTirage: ""
+  # images de l'export anonymisé (mêmes dépôts que le chart urbankiff-donnees)
+  rclone: rclone/rclone:1.68.2
+  postgres: ghcr.io/cloudnative-pg/postgresql
+
+# région (obligatoire pour l'export anonymisé) et endpoint (dérivé de la région si vide) de Wasabi
+wasabi:
+  region: ""
+  endpoint: ""
 
 hosts:
   web: ""
@@ -76,3 +84,34 @@ reseau:
     - 172.16.0.0/12
     - 192.168.0.0/16
     - 169.254.0.0/16
+
+# Job de remise en état après une restauration (migrate, reecrire_urls, prodseed, clearcache) : absent par défaut,
+# rendu à la demande par le script de déploiement (helm template --show-only, --set apresRestauration.actif=true)
+apresRestauration:
+  actif: false
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# Job d'export anonymisé de la prod vers le bucket Wasabi de la preprod (spec § 8.3) : absent par défaut, rendu à la demande
+# par le script de déploiement, seulement en prod, quand prefixe et bucketCible sont renseignés
+exportAnonyme:
+  # restauration/AAAA-MM-JJ-prod-anonyme/
+  prefixe: ""
+  # bucket Wasabi de la preprod
+  bucketCible: ""
+  versionPostgres: 15
+  tailleTravail: 10Gi
+  ressources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  pgTemp:
+    ressources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 256Mi

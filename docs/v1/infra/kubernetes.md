@@ -29,7 +29,7 @@ avant les deux charts.
 ## Contrats
 
 - Valeurs : `environnement` (`prod` ou `preprod`, sinon le rendu échoue), `image.etiquette` (version de la release,
-  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.active`, `restauration.prefixe`,
+  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.prefixe`, `restauration.fichierDump`,
   `wasabi.region` et `wasabi.bucket` (obligatoires, passées par `--set` par le script de déploiement, spec § 8.5 A5),
   `image.secretTirage` (facultatif, vide par défaut : paquets GHCR publics, A1), `hosts.{web,api,panel}`.
 - Images : api `ghcr.io/tigamadou/urbankiff-api:<version>` ; Next et panel `…-nextjs:<version>-<environnement>` et
@@ -203,14 +203,76 @@ volumes et Secrets sont conservés.
   Le `Cluster` passe de `bootstrap.initdb` à `bootstrap.recovery` (`targetTime`, source `externalClusters` par le plugin
   Barman Cloud). `serveurSource` doit différer de `serveur` : sinon la nouvelle archive se mélange à l'ancienne. À
   utiliser sur un namespace dont le `Cluster` a été supprimé.
-- **Job de restauration d'une sauvegarde déposée** (`restauration.active: true`, § 5.10) : le Job `urbankiff-restauration`
-  est absent par défaut. Valeurs : `restauration.prefixe` (obligatoire, relatif à la racine du bucket, par exemple
-  `restauration/2026-12-01/`), `restauration.fichierDump` (défaut `base.dump`), `restauration.copierFichiers` (défaut vrai),
-  `restauration.purger` (défaut vrai). Trois temps : init-conteneur rclone (récupère le préfixe de Wasabi), init-conteneur
-  `pg_restore --no-owner --no-privileges --schema=public --dbname=…` (image PostgreSQL de `postgres.version`, mot de passe
-  du Secret `urbankiff-pg-app`), conteneur rclone (copie `fichiers/` vers RustFS, puis supprime le préfixe de Wasabi). Le Job
-  n'est pas un crochet et ne se rejoue pas : le supprimer avant de relancer. Format (A10) : `<préfixe>/base.dump` (format
-  custom de `pg_dump`) et `<préfixe>/fichiers/`.
+- **Job de restauration d'une sauvegarde déposée** : voir « Restauration et copie » ci-dessous (rendu à la demande,
+  remise à zéro du schéma `public`, aucune purge).
+
+## Restauration et copie
+
+Trois Jobs servent la restauration rejouable et la copie anonymisée de la prod vers la preprod (spec § 8). Aucun n'est
+rendu par un `helm upgrade` ordinaire : chacun est absent tant que sa valeur déclencheuse est vide, et le script de
+déploiement le rend à la demande, le crée, le suit puis le supprime. Aucun n'est un crochet Helm (`backoffLimit: 0`,
+`restartPolicy: Never`, durcissement identique aux autres Jobs).
+
+| Job | Chart | Rendu si | Journal de fin |
+|---|---|---|---|
+| `urbankiff-restauration` | `urbankiff-donnees` | `restauration.prefixe` non vide | `restauration terminée` |
+| `urbankiff-apres-restauration` | `urbankiff` | `apresRestauration.actif: true` | (état du Job) |
+| `urbankiff-export-anonyme` | `urbankiff` | `exportAnonyme.prefixe` et `exportAnonyme.bucketCible` non vides, `environnement: prod` | `export terminé` |
+
+Rendu à la demande, par exemple :
+
+```
+helm template urbankiff-donnees infra/helm/urbankiff-donnees -f infra/helm/urbankiff-donnees/values-preprod.yaml \
+  --show-only templates/restauration-job.yaml --set restauration.prefixe=restauration/2026-12-01/ …
+```
+
+### Restauration
+
+- Préfixe accepté : `^restauration/AAAA-MM-JJ(-prod-anonyme)?/?$` (le suffixe est celui de la copie anonymisée) ; tout autre
+  préfixe (espace, guillemet, `;`, `..`, `$`) fait échouer le rendu (`restauration.prefixe`).
+- Déroulé : `recuperer` (rclone copie le préfixe de Wasabi), `remise-a-zero` (`psql` avec `ON_ERROR_STOP` : contrôle que
+  l'utilisateur applicatif possède le schéma `public` via `pg_has_role(current_user, nspowner, 'USAGE')`, échec explicite sinon,
+  puis `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), `pg-restore` (`--no-owner --no-privileges --schema=public`),
+  puis le conteneur `fichiers` (copie `fichiers/` vers RustFS seulement si le dossier existe : une sauvegarde sans fichiers
+  est valide).
+- Aucune purge : rien n'est supprimé dans Wasabi, la sauvegarde y reste. Valeurs : `restauration.prefixe` (défaut vide),
+  `restauration.fichierDump` (défaut `base.dump`).
+- Écart au contrat : `restauration.active`, `restauration.purger` et `restauration.copierFichiers` n'existent plus (la copie
+  des fichiers est systématique quand `fichiers/` existe) ; le script de déploiement ne doit plus les passer.
+
+### Après restauration
+
+Une commande dans l'image de l'api : `python manage.py migrate && python manage.py reecrire_urls && python manage.py prodseed
+&& python manage.py clearcache` (pas de `loaddata` : les fixtures viennent du dump). Environnement identique à celui de
+l'api ; valeurs `apresRestauration.actif` et `apresRestauration.ressources` (128 Mi / 256 Mi).
+
+### Export anonymisé (prod uniquement)
+
+Les données réelles ne vivent que dans le pod. Déroulé : `pg-temp` (PostgreSQL temporaire en sidecar natif, `127.0.0.1`,
+`emptyDir`, mot de passe aléatoire dans le volume `travail`, UID 26 et groupe 10001 pour ce seul conteneur), `dump-source`
+(`pg_dump` de la base de prod, seul conteneur à lire `urbankiff-pg-app`), `restaurer-temp`, `anonymiser`
+(`ANONYMISATION_AUTORISEE=1`, `POSTGRES_HOST=127.0.0.1`, aucune référence à la base de prod), `lister-fichiers`
+(`lister_fichiers_publics` : une clé d'objet par ligne vers `/travail/fichiers.txt`, échec si la liste est vide),
+`dump-anonyme` (puis suppression du dump source), et le conteneur `deposer` (seul à recevoir les identifiants Wasabi) : dépôt
+de `base.dump` sous `<bucketCible>/<prefixe>` avec contrôle de taille, puis `rclone copy --files-from` des seuls fichiers
+listés vers `<prefixe>fichiers`, jamais le bucket entier, aucune suppression.
+
+- Les deux `pg_dump` portent `--schema=public` (symétrique de `pg_restore --schema=public`). `anonymiser` et `lister-fichiers`
+  ne reçoivent que la ConfigMap et des endpoints inertes (`MINIO_ENDPOINT`, `REDIS_ENDPOINT`), jamais le Secret ; un
+  sidecar `pg-temp` relancé ne refait pas `initdb`.
+- Préfixe accepté : `restauration/AAAA-MM-JJ-prod-anonyme/` ; `bucketCible` : `^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`. Le rendu
+  hors `prod` échoue (le rendu preprod sans valeurs d'export reste vide).
+- Valeurs : `exportAnonyme.{prefixe,bucketCible,versionPostgres,tailleTravail,ressources,pgTemp.ressources}`,
+  `image.postgres`, `image.rclone`, `wasabi.region` (obligatoire : le script doit passer `--set wasabi.region=…` au rendu) et
+  `wasabi.endpoint`.
+
+### Réseau et quota
+
+- Les NetworkPolicies existantes sont réutilisées par le libellé de composant du pod : `urbankiff-apres-restauration` porte
+  `component: migrations`, `urbankiff-export-anonyme` porte `component: restauration` (les Jobs eux-mêmes gardent leur
+  composant). Aucune NetworkPolicy n'a été ajoutée.
+- Les Jobs tournent application arrêtée ; aucun conteneur ne dépasse 256 Mi de limite mémoire, le plus gros conteneur compté
+  pour le quota de la preprod reste inchangé.
 
 ## Utilisation de `make helm-*`
 

@@ -1,0 +1,292 @@
+{{- /* Variables des conteneurs qui touchent aux données : base temporaire locale uniquement, aucune référence à la base de prod. */ -}}
+{{- define "urbankiff.envAnonymisation" -}}
+- name: ANONYMISATION_AUTORISEE
+  value: "1"
+- name: POSTGRES_HOST
+  value: 127.0.0.1
+- name: POSTGRES_DB
+  value: postgres
+- name: POSTGRES_USER
+  value: postgres
+- name: TWILIO_ACCOUNT_SID
+  value: desactive
+- name: TWILIO_AUTH_TOKEN
+  value: desactive
+- name: MINIO_ENDPOINT
+  value: urbankiff-rustfs:9000
+- name: REDIS_ENDPOINT
+  value: redis://127.0.0.1:6379/0
+{{- end -}}
+{{- if and .Values.exportAnonyme.prefixe .Values.exportAnonyme.bucketCible -}}
+{{- $env := include "urbankiff.environnement" . -}}
+{{- if ne $env "prod" -}}
+{{- fail "l'export anonymisé ne se rend qu'en prod (environnement doit valoir prod)" -}}
+{{- end -}}
+{{- if not (regexMatch "^restauration/[0-9]{4}-[0-9]{2}-[0-9]{2}-prod-anonyme/?$" .Values.exportAnonyme.prefixe) -}}
+{{- fail "exportAnonyme.prefixe doit valoir restauration/AAAA-MM-JJ-prod-anonyme/" -}}
+{{- end -}}
+{{- if not (regexMatch "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$" .Values.exportAnonyme.bucketCible) -}}
+{{- fail "exportAnonyme.bucketCible n'est pas un nom de bucket valide" -}}
+{{- end -}}
+{{- $prefixe := printf "%s/" (trimSuffix "/" .Values.exportAnonyme.prefixe) -}}
+{{- $region := required "wasabi.region est obligatoire pour l'export anonymisé" .Values.wasabi.region -}}
+{{- $endpoint := default (printf "s3.%s.wasabisys.com" $region) (trimPrefix "https://" .Values.wasabi.endpoint) -}}
+{{- $postgres := printf "%s:%d" .Values.image.postgres (int .Values.exportAnonyme.versionPostgres) -}}
+{{- /*
+Le pod porte le composant « restauration » pour réutiliser les NetworkPolicies existantes
+(PostgreSQL, RustFS, Internet 443) sans toucher au réseau d'un autre lot.
+MINIO_ENDPOINT et REDIS_ENDPOINT sont inertes (jamais contactés) : minio_service.py lève une erreur à l'import sans endpoint.
+Les données de prod ne vivent que dans ce pod : seul le conteneur « deposer » reçoit les identifiants Wasabi
+et seul « dump-source » lit le Secret de la base de prod.
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: urbankiff-export-anonyme
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" . "composant" "export-anonyme") | nindent 4 }}
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        {{- include "urbankiff.labels" (dict "ctx" . "composant" "restauration") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "urbankiff.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "urbankiff.securityContextPod" . | nindent 8 }}
+      initContainers:
+        - name: pg-temp
+          image: {{ $postgres }}
+          restartPolicy: Always
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              umask 027
+              [ -s /pgdata/data/PG_VERSION ] || {
+                tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > /travail/mdp
+                initdb -D /pgdata/data -U postgres --pwfile=/travail/mdp --auth=scram-sha-256
+              }
+              exec postgres -D /pgdata/data -c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp
+          env:
+            - name: HOME
+              value: /tmp
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1"]
+            periodSeconds: 2
+            failureThreshold: 60
+          resources:
+            {{- toYaml .Values.exportAnonyme.pgTemp.ressources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 26
+            runAsGroup: 10001
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+            - name: pgdata
+              mountPath: /pgdata
+        - name: dump-source
+          image: {{ $postgres }}
+          command: ["pg_dump", "--format=custom", "--schema=public", "--file=/travail/source.dump"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PGHOST
+              value: urbankiff-pg-rw
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretBase }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretBase }}
+                  key: password
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretBase }}
+                  key: dbname
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+        - name: restaurer-temp
+          image: {{ $postgres }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              PGPASSWORD="$(cat /travail/mdp)" pg_restore --no-owner --no-privileges -h 127.0.0.1 -U postgres --dbname=postgres /travail/source.dump
+          env:
+            - name: HOME
+              value: /tmp
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+        - name: anonymiser
+          image: {{ include "urbankiff.imageApi" . }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              POSTGRES_PASSWORD="$(cat /travail/mdp)" python manage.py anonymiser
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configName }}
+          env:
+            {{- include "urbankiff.envAnonymisation" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+        - name: lister-fichiers
+          image: {{ include "urbankiff.imageApi" . }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              POSTGRES_PASSWORD="$(cat /travail/mdp)" python manage.py lister_fichiers_publics > /travail/fichiers.txt
+              [ -s /travail/fichiers.txt ] || { echo "liste des fichiers publics vide" >&2; exit 1; }
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configName }}
+          env:
+            {{- include "urbankiff.envAnonymisation" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+        - name: dump-anonyme
+          image: {{ $postgres }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              PGPASSWORD="$(cat /travail/mdp)" pg_dump --format=custom --schema=public -h 127.0.0.1 -U postgres --file=/travail/anonyme.dump postgres
+              rm -f /travail/source.dump
+          env:
+            - name: HOME
+              value: /tmp
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+      containers:
+        - name: deposer
+          image: {{ .Values.image.rclone }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              rclone copyto /travail/anonyme.dump "wasabi:$CIBLE/{{ $prefixe }}base.dump"
+              local=$(wc -c < /travail/anonyme.dump)
+              distant=$(rclone lsf --format s --include base.dump "wasabi:$CIBLE/{{ $prefixe }}")
+              [ "$local" = "$distant" ] || { echo "taille du dump déposé différente ($distant au lieu de $local)" >&2; exit 1; }
+              rclone copy --files-from /travail/fichiers.txt "rustfs:$BUCKET" "wasabi:$CIBLE/{{ $prefixe }}fichiers"
+              echo export terminé
+          env:
+            - name: HOME
+              value: /tmp
+            - name: CIBLE
+              value: {{ .Values.exportAnonyme.bucketCible }}
+            - name: BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.configName }}
+                  key: MINIO_DEFAULT_BUCKETS
+            - name: RCLONE_CONFIG_RUSTFS_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_RUSTFS_PROVIDER
+              value: Other
+            - name: RCLONE_CONFIG_RUSTFS_ENDPOINT
+              value: http://urbankiff-rustfs:9000
+            - name: RCLONE_CONFIG_RUSTFS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: MINIO_ROOT_USER
+            - name: RCLONE_CONFIG_RUSTFS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: MINIO_ROOT_PASSWORD
+            - name: RCLONE_CONFIG_WASABI_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_WASABI_PROVIDER
+              value: Wasabi
+            - name: RCLONE_CONFIG_WASABI_ENDPOINT
+              value: {{ $endpoint }}
+            - name: RCLONE_CONFIG_WASABI_REGION
+              value: {{ $region | quote }}
+            - name: RCLONE_CONFIG_WASABI_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: WASABI_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_WASABI_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: WASABI_SECRET_ACCESS_KEY
+          resources:
+            {{- toYaml .Values.exportAnonyme.ressources | nindent 12 }}
+          securityContext:
+            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: travail
+              mountPath: /travail
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: travail
+          emptyDir:
+            sizeLimit: {{ .Values.exportAnonyme.tailleTravail }}
+        - name: pgdata
+          emptyDir:
+            sizeLimit: {{ .Values.exportAnonyme.tailleTravail }}
+{{- end }}
