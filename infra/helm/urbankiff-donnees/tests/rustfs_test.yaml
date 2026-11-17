@@ -30,7 +30,73 @@ tests:
           path: spec.ports[0].port
           value: 9000
         documentIndex: 1
-  - it: identifiants par secretKeyRef, console désactivée, aucun hôte public
+  - it: console activée sur 9001 dans le même pod, S3 interne sur 9000
+    template: templates/rustfs.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_CONSOLE_ENABLE
+            value: "true"
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_CONSOLE_ADDRESS
+            value: 0.0.0.0:9001
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: console
+            containerPort: 9001
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: s3
+            containerPort: 9000
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content:
+            name: console
+            port: 9001
+            targetPort: console
+        documentIndex: 1
+      - contains:
+          path: spec.ports
+          content:
+            name: s3
+            port: 9000
+            targetPort: s3
+        documentIndex: 1
+  - it: console désactivée, aucun port console
+    template: templates/rustfs.yaml
+    set:
+      rustfs.console.actif: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_CONSOLE_ENABLE
+            value: "false"
+        documentIndex: 0
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUSTFS_CONSOLE_ADDRESS
+            value: 0.0.0.0:9001
+        documentIndex: 0
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 1
+        documentIndex: 0
+      - lengthEqual:
+          path: spec.ports
+          count: 1
+        documentIndex: 1
+  - it: identifiants par secretKeyRef
     template: templates/rustfs.yaml
     documentIndex: 0
     asserts:
@@ -50,11 +116,6 @@ tests:
               secretKeyRef:
                 name: urbankiff-secrets
                 key: MINIO_ROOT_PASSWORD
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: RUSTFS_CONSOLE_ENABLE
-            value: "false"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
