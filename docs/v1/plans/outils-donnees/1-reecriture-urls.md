@@ -33,7 +33,7 @@ autorité). Plan de la mission `outils-donnees`, lot 1 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Squelette, chargement et validation des règles, garde-fou de la cible · `feature/outils-donnees-reecriture-urls`
   - [x] Tests (fichier livré, fichier invalide, cible absente) écrits et vus en échec
@@ -47,7 +47,7 @@ Statut : 🟡 en cours · Prochaine tâche : 4
   - [x] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
   - [x] Implémentation
   - [x] Tests verts
-- [ ] **Tâche 4** Vérification du lot
+- [x] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
 
