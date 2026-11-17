@@ -67,8 +67,10 @@ spec:
             - |
               set -e
               umask 027
-              tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > /travail/mdp
-              initdb -D /pgdata/data -U postgres --pwfile=/travail/mdp --auth=scram-sha-256
+              [ -s /pgdata/data/PG_VERSION ] || {
+                tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > /travail/mdp
+                initdb -D /pgdata/data -U postgres --pwfile=/travail/mdp --auth=scram-sha-256
+              }
               exec postgres -D /pgdata/data -c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp
           env:
             - name: HOME

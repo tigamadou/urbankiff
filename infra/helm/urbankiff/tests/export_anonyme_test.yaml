@@ -410,3 +410,8 @@ tests:
           path: spec.template.spec.initContainers[5].envFrom
       - isNull:
           path: spec.template.spec.containers[0].envFrom
+  - it: pg-temp ne réinitialise pas une base existante après un redémarrage
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: '\[ -s /pgdata/data/PG_VERSION \] \|\| \{'
