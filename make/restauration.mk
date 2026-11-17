@@ -17,3 +17,15 @@ sauvegarde-inspecter: ## Inspecte une sauvegarde de prod et écrit un rapport (D
 sauvegarde-repeter: ## Répète la restauration d'une sauvegarde de prod dans une base jetable (DUMP=<chemin>)
 	@test -n "$(DUMP)" || { echo "Usage : make sauvegarde-repeter DUMP=<chemin>" >&2; exit 2; }
 	bash $(RESTAURATION_DIR)/repeter-sauvegarde.sh "$(abspath $(DUMP))"
+
+# Restauration de la preprod et de la prod depuis le dépôt Wasabi (docs/v1/infra/deploiement.md). Les cibles s'appuient
+# sur POSTE et POSTE_ENV de make/deploiement.mk, inclus avant ce fichier par le Makefile racine.
+RCLONE_IMAGE := rclone/rclone:1.68.2
+
+.PHONY: restauration-lancer restauration-deposer
+
+restauration-lancer: ## Restaure une sauvegarde déposée dans Wasabi (ENV=<prod|preprod> PREFIXE=restauration/<AAAA-MM-JJ>[-prod-anonyme]/)
+	@$(POSTE_ENV) $(POSTE)/restauration-lancer.sh "$(ENV)" "$(PREFIXE)"
+
+restauration-deposer: ## Dépose une sauvegarde dans Wasabi (ENV=<prod|preprod> DUMP=<fichier> [FICHIERS=<dossier>] DATE=<AAAA-MM-JJ>)
+	@$(POSTE_ENV) RCLONE_IMAGE=$(RCLONE_IMAGE) $(POSTE)/restauration-deposer.sh "$(ENV)" "$(if $(DUMP),$(abspath $(DUMP)))" "$(if $(FICHIERS),$(abspath $(FICHIERS)))" "$(DATE)"

@@ -40,7 +40,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 6
+Statut : 🟡 en cours · Prochaine tâche : 7
 
 - [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
   - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
@@ -57,9 +57,9 @@ Statut : 🟡 en cours · Prochaine tâche : 6
 - [x] **Tâche 5** Script : action `exporter-anonyme`
   - [x] bats : prod seulement, rendu, suivi, bucket cible
   - [x] implémentation
-- [ ] **Tâche 6** Poste : `make restauration-lancer` et `make restauration-deposer`
-  - [ ] bats : usage, confirmation prod, commande exacte, dépôt sans secret en argument
-  - [ ] implémentation
+- [x] **Tâche 6** Poste : `make restauration-lancer` et `make restauration-deposer`
+  - [x] bats : usage, confirmation prod, commande exacte, dépôt sans secret en argument
+  - [x] implémentation
 - [ ] **Tâche 7** Poste : `make copie-prod-preprod`
   - [ ] bats : confirmation, deux SSH dans l'ordre, arrêt au premier échec
   - [ ] implémentation
