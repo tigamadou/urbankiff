@@ -33,21 +33,21 @@ autorité). Plan de la mission `outils-donnees`, lot 1 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
-- [ ] **Tâche 1** Squelette, chargement et validation des règles, garde-fou de la cible · `feature/outils-donnees-reecriture-urls`
-  - [ ] Tests (fichier livré, fichier invalide, cible absente) écrits et vus en échec
-  - [ ] `management/__init__.py`, `commands/__init__.py`, `regles_urls.json`, commande (chargement seul)
-  - [ ] Tests verts
-- [ ] **Tâche 2** Colonnes en mode « préfixe », journal, idempotence
-  - [ ] Tests (une colonne par test, journal, idempotence, valeurs hors règle intactes) écrits et vus en échec
-  - [ ] Réécriture et journal
-  - [ ] Tests verts
-- [ ] **Tâche 3** Colonnes en mode « contenu », règles `s3*`, cas limites
-  - [ ] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
-  - [ ] Implémentation
-  - [ ] Tests verts
-- [ ] **Tâche 4** Vérification du lot
+- [x] **Tâche 1** Squelette, chargement et validation des règles, garde-fou de la cible · `feature/outils-donnees-reecriture-urls`
+  - [x] Tests (fichier livré, fichier invalide, cible absente) écrits et vus en échec
+  - [x] `management/__init__.py`, `commands/__init__.py`, `regles_urls.json`, commande (chargement seul)
+  - [x] Tests verts
+- [x] **Tâche 2** Colonnes en mode « préfixe », journal, idempotence
+  - [x] Tests (une colonne par test, journal, idempotence, valeurs hors règle intactes) écrits et vus en échec
+  - [x] Réécriture et journal
+  - [x] Tests verts
+- [x] **Tâche 3** Colonnes en mode « contenu », règles `s3*`, cas limites
+  - [x] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
+  - [x] Implémentation
+  - [x] Tests verts
+- [x] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
 

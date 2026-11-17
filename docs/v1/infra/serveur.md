@@ -12,7 +12,7 @@ avec la plateforme (cert-manager, CloudNativePG, plugin Barman Cloud, `ClusterIs
 | `base` | paquets, administrateurs à clé, suppression des comptes absents de `admin_users`, sshd durci, ufw, fail2ban | oui (`make infra-test`) |
 | `k3s` | k3s à version épinglée (serveur ou agent), Helm 3 | non (lint et `--syntax-check` seulement) |
 | `plateforme` | manifestes vendus : cert-manager, opérateur CloudNativePG et plugin Barman Cloud (ces deux-là dans le namespace `cnpg-system`, celui des manifestes officiels) ; `ClusterIssuer`, namespaces `plateforme`, `prod` et `preprod`, quota et limites par défaut | non (lint seulement) |
-| `deploiement` | compte `deploy` verrouillé, `authorized_keys` à commande forcée (une clé par environnement), `/etc/urbankiff/deploy.<env>.env`, script de déploiement ; ServiceAccount, Role et kubeconfig par namespace | volet utilisateur oui ; volet Kubernetes non |
+| `deploiement` | compte `deploy` verrouillé, `authorized_keys` à commande forcée (une clé par environnement), `/etc/urbankiff/deploy.<env>.env` (`deploy.prod.env` porte en plus `BUCKET_COPIE_PREPROD`), script de déploiement ; ServiceAccount, Role (dont `traefik.io` `middlewares` en écriture) et kubeconfig par namespace | volet utilisateur oui ; volet Kubernetes non |
 | `fermeture_root` | ferme la connexion SSH de `root`, jouée en dernier après tous les autres plays | oui (`make infra-test`) |
 
 La mise en service réelle (spec § 7) valide ce qui n'est pas testé localement : k3s, la plateforme et le volet
@@ -49,7 +49,8 @@ cp infra/ansible/inventory.example.yml infra/ansible/inventory.yml
 - `ansible_host` de `urbankiff-a` (`ansible_user: root` au premier passage) ;
 - `admin_users` : nom et clé publique **sans commentaire e-mail** (le contrôle refuse un `@`) ;
 - `letsencrypt_email` : uniquement ici, jamais dans `group_vars` ;
-- `deploy_keys`, voir ci-dessous. Jamais de clé privée dans l'inventaire.
+- `deploy_keys`, voir ci-dessous. Jamais de clé privée dans l'inventaire ;
+- `bucket_copie_preprod` (facultatif, non secret, défaut `urbankiff-preprod`) : bucket Wasabi de la preprod, égal à `WASABI_BUCKET` de `scripts/secrets/variables-preprod.txt` ; rendu dans `deploy.prod.env` seulement.
 
 ## Clés de déploiement
 
@@ -93,8 +94,27 @@ Pour prévisualiser : `make infra-ansible LIMITE=noeuds ARGS="--check --diff"`.
   - `kubectl auth can-i create clusterroles --kubeconfig /home/deploy/.kube/prod` répond `no`.
   - ces deux vérifications sont à jouer à la mise en service : le volet Kubernetes de `deploiement` n'est pas testé
     en conteneur, elles sont la seule preuve que les droits sont bien limités par namespace.
+- Droit `middlewares` et bucket de la copie, sur le serveur :
+  - `sudo -u deploy kubectl auth can-i create middlewares.traefik.io --kubeconfig /home/deploy/.kube/preprod` répond `yes` (idem avec `/home/deploy/.kube/prod`) ;
+  - `sudo -u deploy kubectl auth can-i create pods/exec --kubeconfig /home/deploy/.kube/preprod` répond `no` (idem `prod`) ;
+  - `cat /etc/urbankiff/deploy.prod.env` montre `BUCKET_COPIE_PREPROD`, `deploy.preprod.env` non.
 - Le compte `deploy` n'ouvre pas de shell : `ssh deploy@<IP-de-A>` sans commande est refusé par le script de
   déploiement (commande forcée, `restrict`).
+
+## Rejouer le playbook après la mission `outils-donnees`
+
+À faire par le développeur après la fusion de la PR finale, jamais par un agent :
+
+```sh
+make infra-ansible LIMITE=serveur ARGS="--check --diff"
+make infra-ansible LIMITE=serveur
+```
+
+Changements attendus : `deploy.prod.env` (ligne `BUCKET_COPIE_PREPROD`) et Role `deploy` des deux namespaces ; rien d'autre.
+À faire **avant** le premier `exporter-anonyme` et avant le déploiement qui apporte le chart des outils web (sans le
+droit `middlewares`, `helm upgrade` échoue). Le script `urbankiff-deploy` refuse les clés inconnues de
+`deploy.<env>.env` : le rejeu et la mise à jour du script (même PR, lot 5) arrivent ensemble. Contrôler ensuite avec les
+vérifications ci-dessus.
 
 ## Ajouter le nœud B
 
@@ -148,6 +168,7 @@ Le rôle n'applique jamais d'URL distante : seuls les fichiers vendus dans `role
   dans ce lot) ; la mise en service réelle les valide.
 - Compatibilité à vérifier à la mise en service : la version du plugin Barman Cloud doit être compatible avec celle
   de l'opérateur CloudNativePG (voir les notes de version du plugin) ; les deux sont épinglées dans `group_vars/all.yml`.
+- Le Role `deploy` n'a pas `pods/exec` (voulu : la restauration passe par des Jobs) ; son volet Kubernetes reste validé à la mise en service.
 - Les namespaces, le quota de `preprod` (3 Gio de limites, 1,5 Gio de requêtes) et le `LimitRange` sont créés par le
   rôle `plateforme` ; le compte `deploy` ne peut pas les modifier.
 - `deploy.<env>.env` remplace le `deploy.env` unique du contrat initial (arbitrage A8 de la spec).

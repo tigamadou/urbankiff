@@ -32,6 +32,29 @@ done
 grep -q 'resources: \[replicasets\]' roles/deploiement/defaults/main.yml \
     || { echo "ECHEC roles/deploiement/defaults/main.yml : lecture des replicasets absente"; echec=1; }
 
+# Role du compte deploy : middlewares Traefik du chart urbankiff-donnees, jamais pods/exec
+defaults=roles/deploiement/defaults/main.yml
+grep -A2 'apiGroups: \[traefik.io\]' "$defaults" | grep -q 'resources: \[middlewares\]' \
+    && grep -A2 'apiGroups: \[traefik.io\]' "$defaults" | grep -q 'verbs: "{{ deploiement_verbes_ecriture }}"' \
+    || { echo "ECHEC $defaults : règle traefik.io middlewares en écriture absente"; echec=1; }
+if grep -q 'pods/exec' "$defaults"; then echo "ECHEC $defaults : pods/exec interdit"; echec=1; fi
+
+# Bucket de la copie preprod : variable, gabarit (prod seulement), cohérence avec la preprod
+grep -q '^bucket_copie_preprod: ' group_vars/all.yml \
+    || { echo "ECHEC group_vars/all.yml : bucket_copie_preprod absent"; echec=1; }
+gabarit_env=roles/deploiement/templates/deploy.env.j2
+verifier "$gabarit_env" "item.key == 'prod'"
+verifier "$gabarit_env" 'BUCKET_COPIE_PREPROD={{ bucket_copie_preprod }}'
+variables_preprod=../../scripts/secrets/variables-preprod.txt
+if [ -f "$variables_preprod" ]; then
+    bucket_serveur=$(sed -n 's/^bucket_copie_preprod: *\([^ #]*\).*$/\1/p' group_vars/all.yml)
+    bucket_preprod=$(sed -n 's/^WASABI_BUCKET=\(.*\)$/\1/p' "$variables_preprod")
+    [ -n "$bucket_serveur" ] && [ "$bucket_serveur" = "$bucket_preprod" ] \
+        || { echo "ECHEC bucket_copie_preprod ('$bucket_serveur') diffère de WASABI_BUCKET ('$bucket_preprod') de variables-preprod.txt"; echec=1; }
+else
+    echo "ECHEC $variables_preprod absent"; echec=1
+fi
+
 grep -q '^preprod_quota_memoire_limites: 3Gi$' group_vars/all.yml \
     || { echo "ECHEC group_vars/all.yml : quota de preprod différent de infra/helm/tests-transverses/controle.rb (3Gi)"; echec=1; }
 

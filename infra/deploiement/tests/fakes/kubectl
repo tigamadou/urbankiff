@@ -10,6 +10,22 @@ journaliser_entree() {
   printf '%s' "$contenu" | sed -nE 's/^([A-Za-z0-9_]+)=.*/\1/p' | sort | tr '\n' ',' | sed 's/^/STDIN_NOMS /' >> "$FAKE_LOG"
   echo >> "$FAKE_LOG"
 }
+maj_etat() { # scale et annotate d'une charge : met à jour $FAKE_STATE/<genre>.txt (nom replicas replicas-avant)
+  local genre="${2%%/*}" nom="${2#*/}" fichier arg
+  fichier="$FAKE_STATE/$genre.txt"
+  [ -f "$fichier" ] || return 0
+  case "$1" in
+    scale) awk -v n="$nom" -v v="${*: -1}" '$1 == n { sub(/^--replicas=/, "", v); $2 = v } { print }' "$fichier" > "$fichier.nouveau" ;;
+    annotate)
+      for arg in "$@"; do
+        case "$arg" in
+          urbankiff.com/replicas-avant=*) awk -v n="$nom" -v v="${arg#*=}" '$1 == n { $3 = v } { print }' "$fichier" > "$fichier.nouveau" ;;
+          urbankiff.com/replicas-avant-) awk -v n="$nom" '$1 == n { $3 = "" } { print }' "$fichier" > "$fichier.nouveau" ;;
+        esac
+      done ;;
+  esac
+  [ ! -f "$fichier.nouveau" ] || mv "$fichier.nouveau" "$fichier"
+}
 case "$1" in
   get)
     case "$2" in
@@ -17,11 +33,17 @@ case "$1" in
       configmap) [ -f "$FAKE_STATE/config.txt" ] || { echo "NotFound" >&2; exit 1; }; cat "$FAKE_STATE/config.txt" ;;
       ingress) printf '%s' "${FAKE_HOTE-api.test.example}" ;;
       deployment|statefulset) [ ! -f "$FAKE_STATE/$2.txt" ] || cat "$FAKE_STATE/$2.txt" ;;
+      job) cat "$FAKE_STATE/job-$3.txt" 2>/dev/null || printf '/' ;;
       cluster.postgresql.cnpg.io/*) [ ! -f "$FAKE_STATE/hibernation.txt" ] || cat "$FAKE_STATE/hibernation.txt" ;;
       *) echo "faux kubectl : get inattendu : $*" >&2; exit 1 ;;
     esac ;;
+  scale|annotate) maj_etat "$@" ;;
   create) journaliser_entree create; echo "fake-yaml" ;;
   apply) journaliser_entree apply ;;
-  wait) [ -z "${FAKE_WAIT_ECHEC:-}" ] || { echo "timeout" >&2; exit 1; } ;;
+  wait)
+    if [ -n "${FAKE_WAIT_ECHEC:-}" ] && { [ -z "${FAKE_WAIT_ECHEC_SUR:-}" ] || [[ "$*" == *"$FAKE_WAIT_ECHEC_SUR"* ]]; }; then
+      echo "timeout" >&2; exit 1
+    fi ;;
+  logs) cat "$FAKE_STATE/logs-${2#job/}.txt" 2>/dev/null || true ;;
   *) ;;
 esac

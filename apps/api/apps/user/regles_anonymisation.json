@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "motifs_suspects": [
+    "email",
+    "mail",
+    "phone",
+    "contact",
+    "name",
+    "firstname",
+    "lastname",
+    "username",
+    "ip",
+    "addr",
+    "address",
+    "token",
+    "password",
+    "otp",
+    "secret",
+    "birthday",
+    "bio",
+    "nationality",
+    "uid",
+    "agent",
+    "browser",
+    "registration",
+    "avatar",
+    "img",
+    "reason"
+  ],
+  "tables_a_vider": [
+    "django_session",
+    "authtoken_token",
+    "user_passwordresettoken",
+    "mail_otp",
+    "mail_mail",
+    "error_error",
+    "rest_framework_tracking_apirequestlog",
+    "push_notifications_gcmdevice",
+    "push_notifications_apnsdevice",
+    "push_notifications_wnsdevice",
+    "push_notifications_webpushdevice",
+    "oauth2_provider_accesstoken",
+    "oauth2_provider_refreshtoken",
+    "oauth2_provider_grant",
+    "oauth2_provider_idtoken",
+    "social_auth_usersocialauth",
+    "social_auth_nonce",
+    "social_auth_association",
+    "social_auth_code",
+    "social_auth_partial",
+    "django_admin_log"
+  ],
+  "tables_classees": {
+    "user_user": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "password": {
+          "action": "anonymiser",
+          "traitement": "aleatoire",
+          "prefixe": "!"
+        },
+        "last_login": {
+          "action": "garder"
+        },
+        "is_superuser": {
+          "action": "garder"
+        },
+        "email": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "user-{id}@exemple.invalid"
+        },
+        "is_staff": {
+          "action": "garder"
+        },
+        "is_active": {
+          "action": "garder"
+        },
+        "date_joined": {
+          "action": "garder"
+        },
+        "contact": {
+          "action": "anonymiser",
+          "traitement": "nombre_par_id",
+          "base": 99000000000
+        },
+        "deleted": {
+          "action": "garder"
+        },
+        "firstname": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "Prenom{id}"
+        },
+        "lastname": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "Nom{id}"
+        },
+        "status": {
+          "action": "garder"
+        },
+        "avatar": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": "images/fck2c7a8-gc4v-4q3s-behi-5fhnqti9mak4.jpg"
+        },
+        "address": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "bio": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "birthday": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "id_img": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "nationality": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "residence_country": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "username": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "utilisateur-{id}"
+        }
+      }
+    },
+    "user_device": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "created_at": {
+          "action": "garder"
+        },
+        "registration_id": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "appareil-{id}"
+        }
+      }
+    },
+    "user_invitation": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "invitee_email": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "invite-{id}@exemple.invalid"
+        },
+        "token": {
+          "action": "anonymiser",
+          "traitement": "texte_par_id",
+          "modele": "invitation-{id}"
+        },
+        "status": {
+          "action": "garder"
+        },
+        "role": {
+          "action": "garder"
+        },
+        "message": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "created_at": {
+          "action": "garder"
+        },
+        "expires_at": {
+          "action": "garder"
+        },
+        "inviter_id": {
+          "action": "garder"
+        }
+      }
+    },
+    "comment_report": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "reason": {
+          "action": "garder",
+          "justification": "motif de signalement de moderation, texte libre : risque residuel accepte"
+        },
+        "date": {
+          "action": "garder"
+        },
+        "ip": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": "192.0.2.1"
+        },
+        "browser": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": ""
+        },
+        "comment_id": {
+          "action": "garder"
+        },
+        "post_id": {
+          "action": "garder"
+        },
+        "reporter_id": {
+          "action": "garder"
+        }
+      }
+    },
+    "post_postview": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "ip_address": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        },
+        "viewed_at": {
+          "action": "garder"
+        },
+        "post_id": {
+          "action": "garder"
+        },
+        "user_agent": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": null
+        }
+      }
+    },
+    "workers_task": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "handler": {
+          "action": "garder"
+        },
+        "args": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": {}
+        },
+        "kwargs": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": {}
+        },
+        "error": {
+          "action": "anonymiser",
+          "traitement": "valeur_fixe",
+          "valeur": ""
+        },
+        "schedule": {
+          "action": "garder"
+        },
+        "run_at": {
+          "action": "garder"
+        },
+        "created_at": {
+          "action": "garder"
+        },
+        "completed_at": {
+          "action": "garder"
+        },
+        "status": {
+          "action": "garder"
+        }
+      }
+    },
+    "oauth2_provider_application": {
+      "cle": "id",
+      "colonnes": {
+        "id": {
+          "action": "garder"
+        },
+        "client_id": {
+          "action": "garder"
+        },
+        "redirect_uris": {
+          "action": "garder"
+        },
+        "client_type": {
+          "action": "garder"
+        },
+        "authorization_grant_type": {
+          "action": "garder"
+        },
+        "client_secret": {
+          "action": "anonymiser",
+          "traitement": "aleatoire",
+          "prefixe": "secret-"
+        },
+        "name": {
+          "action": "garder",
+          "justification": "nom de l'application OAuth2, pas une personne"
+        },
+        "user_id": {
+          "action": "garder"
+        },
+        "skip_authorization": {
+          "action": "garder"
+        },
+        "created": {
+          "action": "garder"
+        },
+        "updated": {
+          "action": "garder"
+        },
+        "algorithm": {
+          "action": "garder"
+        },
+        "post_logout_redirect_uris": {
+          "action": "garder"
+        }
+      }
+    }
+  },
+  "sans_donnees_personnelles": {
+    "admin_interface_theme": {
+      "name": "nom technique ou editorial, pas une personne",
+      "env_name": "nom technique ou editorial, pas une personne"
+    },
+    "auth_group": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "auth_group_permissions": {},
+    "auth_permission": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "banner_campaign": {},
+    "banner_media": {},
+    "category_category": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "comment_comment": {},
+    "comment_comment_posts": {},
+    "comment_comment_sub_comments": {},
+    "comment_comment_users": {},
+    "comment_subcomment": {},
+    "django_content_type": {},
+    "django_migrations": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "file_file": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "like_like": {},
+    "mail_layout": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "mail_template": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "menu_menu": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "page_page": {},
+    "post_post": {},
+    "post_post_tags": {},
+    "post_tag": {
+      "name": "nom technique ou editorial, pas une personne"
+    },
+    "scrapper_scrapper": {},
+    "twilio_twilioservice": {},
+    "user_user_devices": {},
+    "user_user_groups": {},
+    "user_user_user_permissions": {}
+  }
+}

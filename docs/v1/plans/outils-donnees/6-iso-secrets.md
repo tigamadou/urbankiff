@@ -38,19 +38,19 @@ autorité ; § 2 objectif 7, § 5.1, § 5.5, § 8.3 lignes « Iso (lot 6) » et 
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé
 
-- [ ] **Tâche 1** Secrets : nouveaux secrets, saisie masquée, clés des variables · `feature/outils-donnees-iso-secrets`
-  - [ ] Tests bats d'abord (`inventaire.bats`), vus en échec
-  - [ ] `secrets.txt`, `secrets-inventaire.txt`, `docs/v1/infra/secrets.md` (tableau des secrets)
-- [ ] **Tâche 2** Module du contrôle d'iso et son auto-test
-  - [ ] `iso-test.rb` d'abord (échec : module absent), puis `iso.rb`
-  - [ ] Écart non autorisé détecté, écarts autorisés tolérés
-- [ ] **Tâche 3** Brancher le contrôle d'iso sur les deux charts et adapter le contrôle Twilio
-  - [ ] `controle.rb` d'abord (échec : preprod sans SMS), puis `values-preprod.yaml` (`sms.actif: true`)
-  - [ ] Inventaire sans exception « inerte »
-- [ ] **Tâche 4** Documentation (`secrets.md`, section « Iso preprod / prod » de `kubernetes.md`)
-- [ ] **Tâche 5** Vérification du lot
+- [x] **Tâche 1** Secrets : nouveaux secrets, saisie masquée, clés des variables · `feature/outils-donnees-iso-secrets`
+  - [x] Tests bats d'abord (`inventaire.bats`), vus en échec
+  - [x] `secrets.txt`, `secrets-inventaire.txt`, `docs/v1/infra/secrets.md` (tableau des secrets)
+- [x] **Tâche 2** Module du contrôle d'iso et son auto-test
+  - [x] `iso-test.rb` d'abord (échec : module absent), puis `iso.rb`
+  - [x] Écart non autorisé détecté, écarts autorisés tolérés
+- [x] **Tâche 3** Brancher le contrôle d'iso sur les deux charts et adapter le contrôle Twilio
+  - [x] `controle.rb` d'abord (échec : preprod sans SMS), puis `values-preprod.yaml` (`sms.actif: true`)
+  - [x] Inventaire sans exception « inerte »
+- [x] **Tâche 4** Documentation (`secrets.md`, section « Iso preprod / prod » de `kubernetes.md`)
+- [x] **Tâche 5** Vérification du lot
 
 > Reprise : (vide)
 

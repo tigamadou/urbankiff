@@ -5,9 +5,9 @@ hosts:
   api: preprod.api.urbankiff.com
   panel: preprod.panel.urbankiff.com
 
-# les valeurs Twilio de preprod restent inertes
+# la preprod utilise le compte Twilio de la prod (même références au Secret, SMS réels)
 sms:
-  actif: false
+  actif: true
 
 api:
   ressources:
