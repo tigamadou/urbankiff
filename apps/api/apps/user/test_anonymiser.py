@@ -590,8 +590,8 @@ class AucuneValeurOrigineTests(TestCase):
 
     def test_second_passage_idempotent(self):
         self.lancer()
-        colonnes = {t: [c for c in cs if not (t, c) in {("user_user", "password"),
-                                                         ("oauth2_provider_application", "client_secret")}]
+        aleatoires = {("user_user", "password"), ("oauth2_provider_application", "client_secret")}
+        colonnes = {t: [c for c in cs if (t, c) not in aleatoires]
                     for t, cs in lire_schema(connection).items() if t in self.regles["tables_classees"]}
         premier = lire_tout(colonnes)
         self.lancer()
