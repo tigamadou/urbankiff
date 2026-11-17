@@ -41,7 +41,7 @@ jobs:
               echo "$app=false" >> "$GITHUB_OUTPUT"
             fi
           done
-          if [ -z "$BASE" ] || git diff --name-only "$BASE"...HEAD | grep -qE '^(infra/|scripts/secrets/|make/|Makefile|\.github/workflows/devteam-ci\.yml)'; then
+          if [ -z "$BASE" ] || git diff --name-only "$BASE"...HEAD | grep -qE '^(infra/|scripts/secrets/|make/|Makefile|docs/v1/infra/|\.github/workflows/|\.gitleaks\.toml)'; then
             echo "infra=true" >> "$GITHUB_OUTPUT"
           else
             echo "infra=false" >> "$GITHUB_OUTPUT"
