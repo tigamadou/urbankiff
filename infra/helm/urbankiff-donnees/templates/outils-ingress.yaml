@@ -1,0 +1,2 @@
+{{- $db := required "hosts.db est obligatoire" .Values.hosts.db -}}
+{{- $stockage := required "hosts.stockage est obligatoire" .Values.hosts.stockage -}}

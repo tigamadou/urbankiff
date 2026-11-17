@@ -1,0 +1,13 @@
+suite: outils
+templates:
+  - templates/outils-ingress.yaml
+values:
+  - valeurs-communes.yaml
+tests:
+  - it: hosts.db est obligatoire
+    template: templates/outils-ingress.yaml
+    set:
+      hosts.db: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: hosts.db est obligatoire

@@ -79,6 +79,33 @@ rustfs:
       memory: 64Mi
     limits:
       memory: 192Mi
+  # console web (port 9001) servie par le même pod ; le S3 (9000) reste interne
+  console:
+    actif: true
+    port: 9001
+
+# Hôtes des outils web : fournis par values-<env>.yaml
+hosts:
+  db: ""
+  stockage: ""
+
+ingress:
+  classe: traefik
+  clusterIssuer: letsencrypt
+  limiteDebit:
+    moyenne: 20
+    rafale: 50
+  hsts:
+    secondes: 31536000
+
+pgadmin:
+  image: dpage/pgadmin4:9.9.0
+  port: 8080
+  ressources:
+    requests:
+      memory: 160Mi
+    limits:
+      memory: 320Mi
 
 # Jobs et CronJobs rclone (bucket, copie des fichiers, restauration)
 outils:
