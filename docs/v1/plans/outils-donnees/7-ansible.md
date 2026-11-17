@@ -38,7 +38,7 @@ autorité ; voir aussi § 5.6 et § 5.7). Plan de la mission `outils-donnees`, l
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Tests d'abord : contrôles statiques, vérifications sur conteneur, test d'échec (rouges) · `feature/outils-donnees-ansible`
   - [x] `tests/controles.sh` : règle `middlewares`, absence de `pods/exec`, variable de bucket, cohérence avec la preprod
@@ -52,7 +52,7 @@ Statut : 🟡 en cours · Prochaine tâche : 4
 - [x] **Tâche 3** Inventaire d'exemple et documentation du serveur · `feature/outils-donnees-ansible`
   - [x] `inventory.example.yml` : variable commentée
   - [x] `docs/v1/infra/serveur.md` : nouveaux éléments et rejeu par le développeur après la PR finale
-- [ ] **Tâche 4** Vérification du lot
+- [x] **Tâche 4** Vérification du lot
 
 > Reprise : (vide)
 
