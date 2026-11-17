@@ -30,6 +30,12 @@ class AgentLotTestRunnerTests(SimpleTestCase):
         with patch.dict(os.environ, {'AGENT_LOT': 'x'}), override_settings(DATABASES=_databases('urbankiff_x')):
             self.runner.check_agent_lot_database()
 
+    def test_accepts_database_of_a_lot_with_hyphen(self):
+        with patch.dict(os.environ, {'AGENT_LOT': 'outils-web'}), override_settings(
+            DATABASES=_databases('urbankiff_outils_web')
+        ):
+            self.runner.check_agent_lot_database()
+
     def test_refuses_database_of_another_lot(self):
         with patch.dict(os.environ, {'AGENT_LOT': 'x'}), override_settings(DATABASES=_databases('urbankiff_y')):
             with self.assertRaises(ImproperlyConfigured) as ctx:
