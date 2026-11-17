@@ -41,7 +41,7 @@ deploiement_role_regles:
     resources: [objectstores]
     verbs: "{{ deploiement_verbes_ecriture }}"
   # Middlewares Traefik du chart urbankiff-donnees (limitation de débit, en-têtes de sécurité des outils web).
-  # Aucun droit d exécution dans les pods : la restauration passe par des Jobs.
+  # Aucun droit d'exécution dans les pods : la restauration passe par des Jobs.
   - apiGroups: [traefik.io]
     resources: [middlewares]
     verbs: "{{ deploiement_verbes_ecriture }}"
