@@ -275,8 +275,10 @@ tests:
           path: spec.headers.contentTypeNosniff
           value: true
       - equal:
+          path: spec.headers.customFrameOptionsValue
+          value: SAMEORIGIN
+      - notExists:
           path: spec.headers.frameDeny
-          value: true
   - it: aucun middleware d'authentification
     template: templates/outils-middlewares.yaml
     asserts:

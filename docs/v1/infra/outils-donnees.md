@@ -35,7 +35,8 @@ Le port S3 (9000) de RustFS reste interne au cluster : seuls le port 443 de Trae
 ## Protection
 
 - Traefik applique une limitation de débit par IP source (`ingress.limiteDebit` : 20 requêtes par seconde en moyenne,
-  rafale de 50) et des en-têtes HSTS (un an, sous-domaines compris, `nosniff`, `frameDeny`).
+  rafale de 50) et des en-têtes HSTS (un an, sous-domaines compris, `nosniff`, `X-Frame-Options: SAMEORIGIN`). `SAMEORIGIN` et non `DENY` : pgAdmin affiche ses outils (vue des données,
+  requêtes) dans des iframes de la même origine ; avec `DENY`, ils restent blancs (« refused to connect »).
 - **Aucune authentification côté Traefik** : le login de l'outil est la seule barrière. Conséquence : les mots de passe
   `PGADMIN_MOT_DE_PASSE` et `MINIO_ROOT_PASSWORD` doivent être forts, et leur compromission donne un accès complet à la
   base ou au stockage.
@@ -45,13 +46,17 @@ Le port S3 (9000) de RustFS reste interne au cluster : seuls le port 443 de Trae
 
 Mesuré avec `make helm-controle` et `make helm-rendu ENV=preprod` :
 
-- limites en régime établi : 2 048 Mi pour un quota de 3 072 Mi (pgAdmin : 320 Mi) ;
-- pire chevauchement (migrations et CronJob) : 2 432 Mi ;
+- limites en régime établi : 2 176 Mi (pgAdmin 320 Mi, RustFS 320 Mi) ; avec Barman 256, le pod de mise à jour 384 et le
+  plus gros Job 256 : 3 072 Mi, exactement le quota de 3 072 Mi (aucune marge : toute hausse de limite en preprod le fait
+  échouer) ;
+- pire chevauchement (migrations et CronJob) : 2 560 Mi ;
 - requêtes mémoire : régime établi 936 Mi (api 200, nextjs 192, workers 128, panel 32, PostgreSQL 192, Redis 32,
   RustFS 64, pgAdmin 96), plus Barman 256, le pod de mise à jour 200 et le plus gros Job 128 : 1 520 Mi pour un quota de
   requêtes de 1 536 Mi. Ce contrôle est dans `controle.rb` (`make helm-controle`) ; pgAdmin ne peut pas dépasser
   112 Mi de requête sans le faire échouer.
-- La console RustFS tourne dans les 192 Mi de limite de RustFS ; à surveiller à l'usage.
+- RustFS, console comprise : limite relevée de 192 à 320 Mi en preprod (512 Mi en prod) après des `OOMKilled` répétés
+  (19 redémarrages en 11 h, 188 Mi mesurés) au premier déploiement, sous le balayage de robots qui demandent `.env` dans
+  des buckets au hasard (refusés : accès anonyme interdit).
 
 ## Points à vérifier sur la preprod
 
