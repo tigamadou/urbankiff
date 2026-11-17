@@ -37,6 +37,9 @@ reseau:
 postgres:
   # version majeure : alignée ou supérieure à celle du dump à restaurer, jamais inférieure (spec § 5.11)
   version: 15
+  # client pg_restore du Job de restauration : il lit les archives jusqu'à sa version (un pg_dump 17 écrit le format
+  # 1.16, illisible par pg_restore 15) et restaure vers un serveur plus ancien ; jamais inférieur à `version`
+  versionClientRestauration: 17
   base: urbankiff
   utilisateur: urbankiff
   stockage:
