@@ -84,6 +84,12 @@ class ContenuTests(TestCase):
                      content=CDN + "/meme.jpg " + CDN + "/meme.jpg")
         self.assertEqual(lancer(), ["meme.jpg"])
 
+    def test_cles_decodees_espace_accent_et_ponctuation_finale(self):
+        self.article(image=CDN + "/mon%20fichier.jpg", content="voir %s/%%C3%%A9t%%C3%%A9%%20photo.png, ok" % CDN)
+        File.objects.create(owner=self.utilisateur, name="mon fichier.jpg", path="uploads",
+                            url=CDN + "/mon%20fichier.jpg", mime_type="image/jpeg")
+        self.assertEqual(lancer(), ["mon fichier.jpg", "uploads/mon fichier.jpg", "\u00e9t\u00e9 photo.png"])
+
     def test_url_externe_ignoree(self):
         self.article(image="https://autre.example/ext.jpg", content="https://autre.example/file/ext2.jpg")
         self.assertEqual(lancer(), [])

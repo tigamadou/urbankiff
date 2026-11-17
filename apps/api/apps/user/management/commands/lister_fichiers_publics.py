@@ -1,4 +1,5 @@
 import re
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -31,10 +32,10 @@ class Command(BaseCommand):
             elif "://" in valeur:
                 return []
             valeur = valeur.split("?")[0].split("#")[0].lstrip("/")
-            return [valeur] if valeur else []
+            return [unquote(valeur)] if valeur else []
 
         def depuis_texte(texte):
-            return [cle.rstrip(".,;:!") for cle in motif.findall(texte or "")]
+            return [unquote(cle.rstrip(".,;:!")) for cle in motif.findall(texte or "")]
 
         cites = set()
         for image, audio, video, contenu, intro in Post.objects.values_list(
