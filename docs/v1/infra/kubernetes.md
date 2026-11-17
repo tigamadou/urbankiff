@@ -247,7 +247,8 @@ Usage et DNS : voir [outils-donnees.md](outils-donnees.md).
   `kube-system` seulement), `pgadmin-sortie` (PostgreSQL 5432 seulement, aucune sortie Internet),
   `postgres-entree-pgadmin` (entrée de PostgreSQL depuis pgAdmin).
 - **Quota preprod** : régime établi 2 048 Mi de limites sur 3 072 Mi (pgAdmin 320 Mi), pire chevauchement 2 432 Mi,
-  requêtes en régime établi 1 000 Mi sur 1 536 Mi.
+  requêtes 1 520 Mi sur 1 536 Mi (régime établi 936, Barman 256, pod de mise à jour 200, plus gros Job 128 ; pgAdmin
+  96 Mi), contrôlées par `controle.rb`.
 - **Schéma kubeconform** du Middleware : `infra/helm/schemas/traefik.io/middleware_v1alpha1.json`.
 
 ## Iso preprod / prod
