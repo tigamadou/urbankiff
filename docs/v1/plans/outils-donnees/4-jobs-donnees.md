@@ -317,3 +317,12 @@ Structure du pod (ordre des initContainers, vérifié par les tests ; ordre : `p
 - [ ] Rapport final : `Statut: DONE|PARTIAL|BLOCKED`, tâches, commits, commandes et résultats, points à signaler (dont ce qui ne
   se vérifie que sur le cluster réel après la PR finale : `initdb` en UID 26 avec système de fichiers en lecture seule, remise à zéro du
   schéma par l'utilisateur applicatif de CloudNativePG).
+
+## Écarts au plan
+
+- **`pg_dump --schema=public`** (conteneurs `dump-source` et `dump-anonyme`) : symétrique du `pg_restore --schema=public` de la
+  restauration (arbitrage du lead dev, issue #65). Aucune extension ni objet hors `public` n'est requis par l'application
+  (aucune migration ne crée d'extension, grep fait à la reprise).
+- **`anonymiser` et `lister-fichiers`** : `configMapRef` seul (pas de `secretRef`), avec `MINIO_ENDPOINT` et `REDIS_ENDPOINT`
+  inertes (jamais contactés) car `minio_service.py` instancie le client à l'import. Seul `deposer` reçoit les identifiants Wasabi.
+- **`pg-temp`** : `initdb` et la génération du mot de passe sont sautés si `PG_VERSION` existe déjà (sidecar relancé).

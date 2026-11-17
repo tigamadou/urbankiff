@@ -29,7 +29,7 @@ avant les deux charts.
 ## Contrats
 
 - Valeurs : `environnement` (`prod` ou `preprod`, sinon le rendu échoue), `image.etiquette` (version de la release,
-  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.active`, `restauration.prefixe`,
+  obligatoire), `secretsChecksum` (empreinte des secrets), `sms.actif`, `restauration.prefixe`, `restauration.fichierDump`,
   `wasabi.region` et `wasabi.bucket` (obligatoires, passées par `--set` par le script de déploiement, spec § 8.5 A5),
   `image.secretTirage` (facultatif, vide par défaut : paquets GHCR publics, A1), `hosts.{web,api,panel}`.
 - Images : api `ghcr.io/tigamadou/urbankiff-api:<version>` ; Next et panel `…-nextjs:<version>-<environnement>` et
@@ -257,6 +257,9 @@ Les données réelles ne vivent que dans le pod. Déroulé : `pg-temp` (PostgreS
 de `base.dump` sous `<bucketCible>/<prefixe>` avec contrôle de taille, puis `rclone copy --files-from` des seuls fichiers
 listés vers `<prefixe>fichiers`, jamais le bucket entier, aucune suppression.
 
+- Les deux `pg_dump` portent `--schema=public` (symétrique de `pg_restore --schema=public`). `anonymiser` et `lister-fichiers`
+  ne reçoivent que la ConfigMap et des endpoints inertes (`MINIO_ENDPOINT`, `REDIS_ENDPOINT`), jamais le Secret ; un
+  sidecar `pg-temp` relancé ne refait pas `initdb`.
 - Préfixe accepté : `restauration/AAAA-MM-JJ-prod-anonyme/` ; `bucketCible` : `^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`. Le rendu
   hors `prod` échoue (le rendu preprod sans valeurs d'export reste vide).
 - Valeurs : `exportAnonyme.{prefixe,bucketCible,versionPostgres,tailleTravail,ressources,pgTemp.ressources}`,
