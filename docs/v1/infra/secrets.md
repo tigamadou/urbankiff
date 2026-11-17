@@ -42,7 +42,7 @@ Posées par le même script depuis `scripts/secrets/variables-<env>.txt`.
 | Nom | Usage |
 | --- | --- |
 | `DJANGO_ENV` | mode de l'api |
-| `ALLOWED_HOSTS` | hôtes acceptés par Django ; obligatoire et sans `*` quand `DJANGO_ENV` vaut `staging` ou `production` (l'api refuse de démarrer sinon) |
+| `ALLOWED_HOSTS` | hôtes acceptés par Django ; obligatoire et sans `*` quand `DJANGO_ENV` vaut `staging` ou `production` (l'api refuse de démarrer sinon). Inclut `urbankiff-api` : le rendu serveur de Next appelle l'api par le Service interne (`BACKEND_URL=http://urbankiff-api:8000`), sinon `DisallowedHost` et pages vides |
 | `WEB_URL` | URL publique du front |
 | `API_URL` | URL publique de l'api |
 | `SMTP_SERVER` | serveur SMTP |
