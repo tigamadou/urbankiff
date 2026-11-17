@@ -3,6 +3,8 @@
 
 REPERE='Valeur-Repere-Xq7=avec espace'
 
+load aide
+
 setup() {
   RACINE_DEPOT="$BATS_TEST_DIRNAME/../../.."
   SCRIPT="$BATS_TEST_DIRNAME/../urbankiff-deploy.sh"
@@ -21,7 +23,7 @@ setup() {
   entree_complete > "$ENTREE"
 }
 
-noms_secrets() { grep -vE '^(#|$)' "$RACINE_DEPOT/scripts/secrets/secrets.txt" | cut -d' ' -f1; }
+noms_secrets() { noms_secrets_complets; }
 
 entree_complete() {
   local nom
@@ -198,3 +200,11 @@ empreinte_journal() { grep -o 'secretsChecksum=[0-9a-f]*' "$FAKE_LOG" | head -1;
   [ "$(empreinte_journal)" = "$a" ]
 }
 
+
+@test "entrée sans PGADMIN_EMAIL : refusée par deploy" {
+  grep -v '^PGADMIN_EMAIL=' "$ENTREE" > "$ENTREE.sans"
+  deployer "$ENTREE.sans"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"clé obligatoire absente ou vide : PGADMIN_EMAIL"* ]]
+  ! grep -q '^kubectl' "$FAKE_LOG"
+}

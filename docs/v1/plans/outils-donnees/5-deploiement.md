@@ -29,7 +29,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Exécution
 
-- **Mission** : `outils-donnees` · **Issue** : à renseigner par le superviseur
+- **Mission** : `outils-donnees` · **Issue** : #49
 - **Branche** : `feature/outils-donnees-deploiement` · **Base** : `feature/outils-donnees` · **Profil** : `api`
 - **Dépendances** : aucune (contrats du § 8.3 de la spec, testés avec des faux).
 - Toutes les commandes `make` se lancent dans le worktree du lot.
@@ -40,35 +40,35 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : ✅ terminé · Prochaine tâche : aucune
 
-- [ ] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
-  - [ ] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
-  - [ ] implémentation : `SECRET_KEYS`, faux étendus
-- [ ] **Tâche 2** Script : analyse des commandes `restaurer` et `exporter-anonyme`, clé `BUCKET_COPIE_PREPROD`
-  - [ ] bats : motifs, refus, verrou, configuration
-  - [ ] implémentation
-- [ ] **Tâche 3** Script : aides communes (arrêt et remise des réplicas, version déployée, rendu et suivi d'un Job)
-  - [ ] bats : non-régression de `preprod-arret` et `preprod-demarrage`, rendu, suivi
-  - [ ] implémentation
-- [ ] **Tâche 4** Script : action `restaurer` complète
-  - [ ] bats : contrôle du préfixe Wasabi, déroulé, ordre, échecs qui laissent l'application arrêtée, relance
-  - [ ] implémentation
-- [ ] **Tâche 5** Script : action `exporter-anonyme`
-  - [ ] bats : prod seulement, rendu, suivi, bucket cible
-  - [ ] implémentation
-- [ ] **Tâche 6** Poste : `make restauration-lancer` et `make restauration-deposer`
-  - [ ] bats : usage, confirmation prod, commande exacte, dépôt sans secret en argument
-  - [ ] implémentation
-- [ ] **Tâche 7** Poste : `make copie-prod-preprod`
-  - [ ] bats : confirmation, deux SSH dans l'ordre, arrêt au premier échec
-  - [ ] implémentation
-- [ ] **Tâche 8** Workflows `restauration.yml` et `copie-prod-preprod.yml`
-  - [ ] bats : invariants de sécurité ; actionlint
-  - [ ] implémentation
-- [ ] **Tâche 9** Documentation `docs/v1/infra/deploiement.md`
-- [ ] **Tâche 10** Réécriture de `docs/v1/infra/premier-deploiement-prod.md`
-- [ ] **Tâche 11** Vérification du lot
+- [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
+  - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
+  - [x] implémentation : `SECRET_KEYS`, faux étendus
+- [x] **Tâche 2** Script : analyse des commandes `restaurer` et `exporter-anonyme`, clé `BUCKET_COPIE_PREPROD`
+  - [x] bats : motifs, refus, verrou, configuration
+  - [x] implémentation
+- [x] **Tâche 3** Script : aides communes (arrêt et remise des réplicas, version déployée, rendu et suivi d'un Job)
+  - [x] bats : non-régression de `preprod-arret` et `preprod-demarrage`, rendu, suivi
+  - [x] implémentation
+- [x] **Tâche 4** Script : action `restaurer` complète
+  - [x] bats : contrôle du préfixe Wasabi, déroulé, ordre, échecs qui laissent l'application arrêtée, relance
+  - [x] implémentation
+- [x] **Tâche 5** Script : action `exporter-anonyme`
+  - [x] bats : prod seulement, rendu, suivi, bucket cible
+  - [x] implémentation
+- [x] **Tâche 6** Poste : `make restauration-lancer` et `make restauration-deposer`
+  - [x] bats : usage, confirmation prod, commande exacte, dépôt sans secret en argument
+  - [x] implémentation
+- [x] **Tâche 7** Poste : `make copie-prod-preprod`
+  - [x] bats : confirmation, deux SSH dans l'ordre, arrêt au premier échec
+  - [x] implémentation
+- [x] **Tâche 8** Workflows `restauration.yml` et `copie-prod-preprod.yml`
+  - [x] bats : invariants de sécurité ; actionlint
+  - [x] implémentation
+- [x] **Tâche 9** Documentation `docs/v1/infra/deploiement.md`
+- [x] **Tâche 10** Réécriture de `docs/v1/infra/premier-deploiement-prod.md`
+- [x] **Tâche 11** Vérification du lot
 
 > Reprise : (vide)
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 # Déploiement : charts OCI, ordre des appels, --atomic, santé.
 
+load aide
+
 setup() {
   RACINE_DEPOT="$BATS_TEST_DIRNAME/../../.."
   SCRIPT="$BATS_TEST_DIRNAME/../urbankiff-deploy.sh"
@@ -18,7 +20,7 @@ setup() {
   printf 'URBANKIFF_ENV=preprod\nGHCR_OWNER=tigamadou\nNAMESPACE=preprod\nAPI_SERVER_CIDR=203.0.113.10/32\n' > "$URBANKIFF_CONFIG_DIR/deploy.preprod.env"
   ENTREE="$BATS_TEST_TMPDIR/entree"
   {
-    for nom in $(grep -vE '^(#|$)' "$RACINE_DEPOT/scripts/secrets/secrets.txt" | cut -d' ' -f1); do echo "$nom=valeur-$nom"; done
+    for nom in $(noms_secrets_complets); do echo "$nom=valeur-$nom"; done
     grep -vE '^(#|$)' "$RACINE_DEPOT/scripts/secrets/variables-preprod.txt" \
       | sed -e 's/^WASABI_REGION=$/WASABI_REGION=eu-central-1/' -e 's/^WASABI_BUCKET=$/WASABI_BUCKET=urbankiff-preprod/'
   } > "$ENTREE"
