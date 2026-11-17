@@ -33,16 +33,16 @@ autorité). Plan de la mission `outils-donnees`, lot 1 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 2
+Statut : 🟡 en cours · Prochaine tâche : 3
 
 - [x] **Tâche 1** Squelette, chargement et validation des règles, garde-fou de la cible · `feature/outils-donnees-reecriture-urls`
   - [x] Tests (fichier livré, fichier invalide, cible absente) écrits et vus en échec
   - [x] `management/__init__.py`, `commands/__init__.py`, `regles_urls.json`, commande (chargement seul)
   - [x] Tests verts
-- [ ] **Tâche 2** Colonnes en mode « préfixe », journal, idempotence
-  - [ ] Tests (une colonne par test, journal, idempotence, valeurs hors règle intactes) écrits et vus en échec
-  - [ ] Réécriture et journal
-  - [ ] Tests verts
+- [x] **Tâche 2** Colonnes en mode « préfixe », journal, idempotence
+  - [x] Tests (une colonne par test, journal, idempotence, valeurs hors règle intactes) écrits et vus en échec
+  - [x] Réécriture et journal
+  - [x] Tests verts
 - [ ] **Tâche 3** Colonnes en mode « contenu », règles `s3*`, cas limites
   - [ ] Tests (contenu HTML, règle à chemin de bucket, frontière de préfixe, cible préfixée par la source, atomicité) écrits et vus en échec
   - [ ] Implémentation

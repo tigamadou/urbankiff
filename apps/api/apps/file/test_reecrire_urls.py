@@ -12,7 +12,6 @@ from apps.category.models import Category
 from apps.file.management.commands.reecrire_urls import COLONNES
 from apps.file.models import File
 from apps.menu.models import Menu
-from apps.page.models import Page
 from apps.post.models import Post
 from apps.scrapper.models import Scrapper
 from apps.user.factories import UserFactory
