@@ -21,6 +21,7 @@ all:
           - name: admin
             pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE"
         letsencrypt_email: "a-completer"
+        # bucket_copie_preprod: urbankiff-preprod   # facultatif : défaut de group_vars/all.yml, doit égaler WASABI_BUCKET de la preprod
         deploy_keys:
           preprod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPREPRODFAKEPREPRODFAKEPREPRODFAKEPREPROD"
           prod: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPRODFAKEPR"
