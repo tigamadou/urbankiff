@@ -40,7 +40,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 10
+Statut : 🟡 en cours · Prochaine tâche : 11
 
 - [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
   - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
@@ -67,7 +67,7 @@ Statut : 🟡 en cours · Prochaine tâche : 10
   - [x] bats : invariants de sécurité ; actionlint
   - [x] implémentation
 - [x] **Tâche 9** Documentation `docs/v1/infra/deploiement.md`
-- [ ] **Tâche 10** Réécriture de `docs/v1/infra/premier-deploiement-prod.md`
+- [x] **Tâche 10** Réécriture de `docs/v1/infra/premier-deploiement-prod.md`
 - [ ] **Tâche 11** Vérification du lot
 
 > Reprise : (vide)
