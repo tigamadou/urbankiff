@@ -36,12 +36,12 @@ autorité). Plan de la mission `outils-donnees`, lot 2 sur 7.
 
 ## Avancement
 
-Statut : ⬜ à faire · Prochaine tâche : 1
+Statut : 🟡 en cours · Prochaine tâche : 2
 
-- [ ] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
-  - [ ] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
-  - [ ] Commande `anonymiser` (garde-fou, option `--regles`, chargement et validation du format des règles)
-  - [ ] Tests verts
+- [x] **Tâche 1** Garde-fou d'environnement et squelette de la commande · `feature/outils-donnees-anonymisation`
+  - [x] Tests du garde-fou (code 2, rien modifié) écrits et vus en échec
+  - [x] Commande `anonymiser` (garde-fou, option `--regles`, chargement et validation du format des règles)
+  - [x] Tests verts
 - [ ] **Tâche 2** Moteur d'application des traitements
   - [ ] Tests (chaque traitement, vidage de table, journal, idempotence, intégrité) écrits et vus en échec
   - [ ] Moteur SQL en une transaction
