@@ -129,9 +129,10 @@ lire_entree() {
   unset reste ligne valeur
 }
 
-valider_entree() {
+valider_entree() { # [sans-pgadmin] : n'exige pas les identifiants pgAdmin
   local cle
   for cle in $SECRET_KEYS; do
+    [[ "${1:-}" == sans-pgadmin && "$cle" == PGADMIN_* ]] && continue
     [ -n "${SECRET_B64[$cle]:-}" ] || die "clé obligatoire absente ou vide : $cle"
   done
   for cle in $VARIABLE_KEYS; do
@@ -163,14 +164,14 @@ lire_cluster() { # [pgadmin] : exige aussi les identifiants pgAdmin
   unset sortie ligne
   [ "${1:-}" != pgadmin ] || { [ -n "${SECRET_B64[PGADMIN_EMAIL]:-}" ] && [ -n "${SECRET_B64[PGADMIN_MOT_DE_PASSE]:-}" ]; } \
     || die "Secret incomplet : relancer make secrets-cluster"
-  valider_entree
+  if [ "${1:-}" = pgadmin ]; then valider_entree; else valider_entree sans-pgadmin; fi
 }
 
 calculer_empreinte() {
   local cle
   CHECKSUM="$({
     echo secrets
-    for cle in $(printf '%s\n' $SECRET_KEYS | sort); do echo "$cle=${SECRET_B64[$cle]}"; done
+    for cle in $(printf '%s\n' $SECRET_KEYS | sort); do echo "$cle=${SECRET_B64[$cle]:-}"; done
     echo config
     for cle in $(printf '%s\n' $VARIABLE_KEYS | sort); do echo "$cle=${VARIABLE_VAL[$cle]}"; done
   } | sha256sum | cut -c1-16)"
