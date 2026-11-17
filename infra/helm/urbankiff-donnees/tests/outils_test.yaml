@@ -3,11 +3,130 @@ templates:
   - templates/outils-ingress.yaml
   - templates/pgadmin.yaml
   - templates/outils-middlewares.yaml
+  - templates/reseau-outils.yaml
 values:
   - valeurs-communes.yaml
 release:
   namespace: urbankiff-preprod
 tests:
+  - it: quatre NetworkPolicies des outils, libellées part-of
+    template: templates/reseau-outils.yaml
+    asserts:
+      - hasDocuments:
+          count: 4
+      - equal:
+          path: metadata.name
+          value: pgadmin-entree
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: stockage-console-entree
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: pgadmin-sortie
+        documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: postgres-entree-pgadmin
+        documentIndex: 3
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: urbankiff
+        documentIndex: 0
+  - it: Traefik vers pgAdmin et vers la console, uniquement
+    template: templates/reseau-outils.yaml
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: pgadmin
+        documentIndex: 0
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress]
+        documentIndex: 0
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 8080
+                  protocol: TCP
+        documentIndex: 0
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: rustfs
+        documentIndex: 1
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+                  podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: traefik
+              ports:
+                - port: 9001
+                  protocol: TCP
+        documentIndex: 1
+  - it: pgAdmin sort uniquement vers PostgreSQL 5432, sans ipBlock
+    template: templates/reseau-outils.yaml
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value: [Egress]
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            app.kubernetes.io/part-of: urbankiff
+            app.kubernetes.io/component: pgadmin
+      - equal:
+          path: spec.egress
+          value:
+            - to:
+                - podSelector:
+                    matchLabels:
+                      cnpg.io/cluster: urbankiff-pg
+              ports:
+                - port: 5432
+                  protocol: TCP
+      - notExists:
+          path: spec.egress[0].to[0].ipBlock
+      - lengthEqual:
+          path: spec.egress
+          count: 1
+  - it: PostgreSQL accepte le composant pgadmin sur 5432
+    template: templates/reseau-outils.yaml
+    documentIndex: 3
+    asserts:
+      - equal:
+          path: spec.podSelector.matchLabels
+          value:
+            cnpg.io/cluster: urbankiff-pg
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/part-of: urbankiff
+                      app.kubernetes.io/component: pgadmin
+              ports:
+                - port: 5432
+                  protocol: TCP
   - it: hosts.stockage est obligatoire
     template: templates/outils-ingress.yaml
     set:
