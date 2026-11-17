@@ -1,0 +1,379 @@
+suite: export anonymisé
+templates:
+  - templates/export-anonyme-job.yaml
+values:
+  - valeurs-communes.yaml
+set:
+  environnement: prod
+  wasabi.region: eu-central-2
+  exportAnonyme.prefixe: restauration/2026-11-17-prod-anonyme/
+  exportAnonyme.bucketCible: bucket-preprod-test
+tests:
+  - it: absent par défaut
+    set:
+      exportAnonyme.prefixe: ""
+      exportAnonyme.bucketCible: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: absent avec seulement le préfixe
+    set:
+      exportAnonyme.bucketCible: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: absent avec seulement le bucket cible
+    set:
+      exportAnonyme.prefixe: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: le rendu preprod sans valeurs d'export reste vide
+    set:
+      environnement: preprod
+      exportAnonyme.prefixe: ""
+      exportAnonyme.bucketCible: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: refuse le rendu hors prod
+    set:
+      environnement: preprod
+    asserts:
+      - failedTemplate:
+          errorPattern: "prod"
+  - it: accepte le préfixe de la copie anonymisée
+    asserts:
+      - isKind:
+          of: Job
+  - it: refuse un préfixe sans suffixe -prod-anonyme
+    set:
+      exportAnonyme.prefixe: restauration/2026-11-17/
+    asserts:
+      - failedTemplate:
+          errorPattern: "exportAnonyme.prefixe"
+  - it: refuse un préfixe avec ..
+    set:
+      exportAnonyme.prefixe: restauration/../2026-11-17-prod-anonyme/
+    asserts:
+      - failedTemplate:
+          errorPattern: "exportAnonyme.prefixe"
+  - it: refuse un préfixe avec espace
+    set:
+      exportAnonyme.prefixe: "restauration/2026-11-17-prod-anonyme /"
+    asserts:
+      - failedTemplate:
+          errorPattern: "exportAnonyme.prefixe"
+  - it: refuse un préfixe avec caractère de shell
+    set:
+      exportAnonyme.prefixe: 'restauration/2026-11-17-prod-anonyme$(id)/'
+    asserts:
+      - failedTemplate:
+          errorPattern: "exportAnonyme.prefixe"
+  - it: refuse un bucket cible non conforme
+    set:
+      exportAnonyme.bucketCible: "Bucket;rm"
+    asserts:
+      - failedTemplate:
+          errorPattern: "exportAnonyme.bucketCible"
+  - it: exige la région Wasabi
+    set:
+      wasabi.region: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "wasabi.region"
+  - it: nom, libellés, durée bornée, sans crochet
+    asserts:
+      - equal:
+          path: metadata.name
+          value: urbankiff-export-anonyme
+      - notExists:
+          path: metadata.annotations["helm.sh/hook"]
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: export-anonyme
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: restauration
+      - equal:
+          path: spec.backoffLimit
+          value: 0
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 7200
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+  - it: ordre des étapes
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: pg-temp
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: dump-source
+      - equal:
+          path: spec.template.spec.initContainers[2].name
+          value: restaurer-temp
+      - equal:
+          path: spec.template.spec.initContainers[3].name
+          value: anonymiser
+      - equal:
+          path: spec.template.spec.initContainers[4].name
+          value: lister-fichiers
+      - equal:
+          path: spec.template.spec.initContainers[5].name
+          value: dump-anonyme
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: deposer
+  - it: PostgreSQL temporaire en sidecar natif, uid 26 limité à ce conteneur
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].restartPolicy
+          value: Always
+      - exists:
+          path: spec.template.spec.initContainers[0].startupProbe
+      - equal:
+          path: spec.template.spec.initContainers[0].startupProbe.exec.command
+          value: ["pg_isready", "-h", "127.0.0.1"]
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: ghcr.io/cloudnative-pg/postgresql:15
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: 'listen_addresses=127\.0\.0\.1'
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: '/dev/urandom'
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: '--pwfile=/travail/mdp'
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsUser
+          value: 26
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsGroup
+          value: 10001
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.initContainers[3].securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 10001
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 10001
+  - it: dump source de la base de prod, seul à lire urbankiff-pg-app
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].command
+          value: ["pg_dump", "--format=custom", "--schema=public", "--file=/travail/source.dump"]
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGHOST
+            value: urbankiff-pg-rw
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+      - equal:
+          path: spec.template.spec.initContainers[0].env
+          value:
+            - name: HOME
+              value: /tmp
+      - equal:
+          path: spec.template.spec.initContainers[2].env
+          value:
+            - name: HOME
+              value: /tmp
+      - equal:
+          path: spec.template.spec.initContainers[5].env
+          value:
+            - name: HOME
+              value: /tmp
+  - it: restauration dans la base temporaire locale
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[2].command
+          value: ["sh", "-c"]
+      - matchRegex:
+          path: spec.template.spec.initContainers[2].args[0]
+          pattern: 'PGPASSWORD="\$\(cat /travail/mdp\)" pg_restore --no-owner --no-privileges -h 127\.0\.0\.1 -U postgres --dbname=postgres /travail/source\.dump'
+  - it: anonymiser vise uniquement la base temporaire
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[3].image
+          value: ghcr.io/tigamadou/urbankiff-api:1.2.3
+      - equal:
+          path: spec.template.spec.initContainers[3].env
+          value:
+            - name: ANONYMISATION_AUTORISEE
+              value: "1"
+            - name: POSTGRES_HOST
+              value: 127.0.0.1
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: postgres
+            - name: TWILIO_ACCOUNT_SID
+              value: desactive
+            - name: TWILIO_AUTH_TOKEN
+              value: desactive
+      - matchRegex:
+          path: spec.template.spec.initContainers[3].args[0]
+          pattern: 'POSTGRES_PASSWORD="\$\(cat /travail/mdp\)" python manage\.py anonymiser'
+      - equal:
+          path: spec.template.spec.initContainers[3].envFrom
+          value:
+            - secretRef:
+                name: urbankiff-secrets
+            - configMapRef:
+                name: urbankiff-config
+  - it: lister-fichiers a le même garde-fou que anonymiser
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[4].image
+          value: ghcr.io/tigamadou/urbankiff-api:1.2.3
+      - equal:
+          path: spec.template.spec.initContainers[4].env
+          value:
+            - name: ANONYMISATION_AUTORISEE
+              value: "1"
+            - name: POSTGRES_HOST
+              value: 127.0.0.1
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: postgres
+            - name: TWILIO_ACCOUNT_SID
+              value: desactive
+            - name: TWILIO_AUTH_TOKEN
+              value: desactive
+      - matchRegex:
+          path: spec.template.spec.initContainers[4].args[0]
+          pattern: 'python manage\.py lister_fichiers_publics > /travail/fichiers\.txt'
+      - matchRegex:
+          path: spec.template.spec.initContainers[4].args[0]
+          pattern: '\[ -s /travail/fichiers\.txt \]'
+  - it: dump anonyme puis suppression du dump source
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.initContainers[5].args[0]
+          pattern: 'pg_dump --format=custom --schema=public -h 127\.0\.0\.1 -U postgres --file=/travail/anonyme\.dump postgres'
+      - matchRegex:
+          path: spec.template.spec.initContainers[5].args[0]
+          pattern: '(?s)anonyme\.dump.*rm -f /travail/source\.dump'
+  - it: dépôt de la seule version anonymisée et des fichiers listés
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CIBLE
+            value: bucket-preprod-test
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone copyto /travail/anonyme\.dump "wasabi:\$CIBLE/restauration/2026-11-17-prod-anonyme/base\.dump"'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone copy --files-from /travail/fichiers\.txt "rustfs:\$BUCKET" "wasabi:\$CIBLE/restauration/2026-11-17-prod-anonyme/fichiers"'
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone copy "?rustfs:'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'rclone lsf --format s'
+      - matchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'echo export terminé\s*$'
+  - it: identifiants Wasabi réservés au conteneur de dépôt
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RCLONE_CONFIG_WASABI_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: WASABI_ACCESS_KEY_ID
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RCLONE_CONFIG_WASABI_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-secrets
+                key: WASABI_SECRET_ACCESS_KEY
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: urbankiff-pg-app
+                key: password
+  - it: aucune suppression distante
+    asserts:
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].args[0]
+          pattern: 'purge|sync|delete'
+      - notMatchRegex:
+          path: spec.template.spec.initContainers[5].args[0]
+          pattern: 'purge|sync|delete'
+  - it: durcissement, limites mémoire, volumes bornés
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: 256Mi
+      - exists:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+      - exists:
+          path: spec.template.spec.initContainers[2].resources.limits.memory
+      - equal:
+          path: spec.template.spec.initContainers[3].resources.limits.memory
+          value: 256Mi
+      - exists:
+          path: spec.template.spec.initContainers[4].resources.limits.memory
+      - exists:
+          path: spec.template.spec.initContainers[5].resources.limits.memory
+      - exists:
+          path: spec.template.spec.containers[0].resources.limits.memory
+      - exists:
+          path: spec.template.spec.initContainers[3].resources.requests.memory
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: travail
+            emptyDir:
+              sizeLimit: 10Gi
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pgdata
+            emptyDir:
+              sizeLimit: 10Gi
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
