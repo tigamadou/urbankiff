@@ -99,13 +99,21 @@ aucune_charge_touchee() {
 }
 
 @test "préfixe absent de Wasabi : rien n'est arrêté, les identifiants ne sont pas dans la requête" {
-  FAKE_CURL_ECHEC_SUR=wasabisys restaurer preprod restauration/2026-11-17/
+  FAKE_CURL_ECHEC_SUR=wasabisys FAKE_CURL_CODE=404 restaurer preprod restauration/2026-11-17/
   [ "$status" -eq 1 ]
   [[ "$output" == *"préfixe introuvable dans le bucket urbankiff-preprod : restauration/2026-11-17/base.dump"* ]]
   aucune_charge_touchee
   absent -q 'valeur-WASABI' "$FAKE_LOG"
   grep -qE '^STDIN curl [0-9]+$' "$FAKE_LOG"
   [[ "$output" != *"l'application reste arrêtée"* ]]
+}
+
+@test "authentification Wasabi refusée : message distinct de préfixe introuvable, rien n'est arrêté" {
+  FAKE_CURL_ECHEC_SUR=wasabisys FAKE_CURL_CODE=403 restaurer preprod restauration/2026-11-17/
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"contrôle du préfixe impossible (HTTP 403)"* ]]
+  [[ "$output" != *"préfixe introuvable"* ]]
+  aucune_charge_touchee
 }
 
 @test "base pas prête : rien n'est arrêté" {

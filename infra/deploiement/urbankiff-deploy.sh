@@ -148,7 +148,7 @@ appliquer_entree() {
   log "Secret urbankiff-secrets et ConfigMap urbankiff-config appliqués"
 }
 
-lire_cluster() {
+lire_cluster() { # [pgadmin] : exige aussi les identifiants pgAdmin
   local sortie ligne cle
   sortie="$(kubectl get secret urbankiff-secrets -n "$NAMESPACE" -o go-template='{{range $k, $v := .data}}{{$k}}={{$v}}{{"\n"}}{{end}}')" \
     || die "Secret urbankiff-secrets introuvable : premier déploiement, fournir les Secrets (voir make secrets-cluster)"
@@ -161,7 +161,7 @@ lire_cluster() {
     [[ "$ligne" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] && VARIABLE_VAL[${BASH_REMATCH[1]}]="${BASH_REMATCH[2]}"
   done <<< "$sortie"
   unset sortie ligne
-  [ -n "${SECRET_B64[PGADMIN_EMAIL]:-}" ] && [ -n "${SECRET_B64[PGADMIN_MOT_DE_PASSE]:-}" ] \
+  [ "${1:-}" != pgadmin ] || { [ -n "${SECRET_B64[PGADMIN_EMAIL]:-}" ] && [ -n "${SECRET_B64[PGADMIN_MOT_DE_PASSE]:-}" ]; } \
     || die "Secret incomplet : relancer make secrets-cluster"
   valider_entree
 }
@@ -186,7 +186,7 @@ preparer_secrets() {
     valider_entree
   else
     log "aucune entrée standard : Secrets et variables existants réutilisés"
-    lire_cluster
+    lire_cluster pgadmin
   fi
   calculer_empreinte
 }
@@ -344,20 +344,24 @@ suivre_job() { # <nom> <journal de fin, vide si non exigé> : le Job d'un échec
 }
 
 controler_prefixe() {
-  local identifiant secret
+  local identifiant secret code
   identifiant="$(base64 -d <<< "${SECRET_B64[WASABI_ACCESS_KEY_ID]}")"
   secret="$(base64 -d <<< "${SECRET_B64[WASABI_SECRET_ACCESS_KEY]}")"
   # Les identifiants passent par l'entrée standard de curl (-K -), jamais par un argument.
-  printf 'user = "%s:%s"\n' "$identifiant" "$secret" | curl -fsS --max-time 20 --head --aws-sigv4 "aws:amz:$WASABI_REGION:s3" -K - \
-    "https://s3.$WASABI_REGION.wasabisys.com/$WASABI_BUCKET/${PREFIXE}base.dump" > /dev/null \
-    || { unset identifiant secret; die "préfixe introuvable dans le bucket $WASABI_BUCKET : ${PREFIXE}base.dump"; }
+  code="$(printf 'user = "%s:%s"\n' "$identifiant" "$secret" | curl -sS --max-time 20 -o /dev/null -w '%{http_code}' --head --aws-sigv4 "aws:amz:$WASABI_REGION:s3" -K - \
+    "https://s3.$WASABI_REGION.wasabisys.com/$WASABI_BUCKET/${PREFIXE}base.dump")" || code=000
   unset identifiant secret
+  case "$code" in
+    200) ;;
+    404) die "préfixe introuvable dans le bucket $WASABI_BUCKET : ${PREFIXE}base.dump" ;;
+    *) die "contrôle du préfixe impossible (HTTP $code) dans le bucket $WASABI_BUCKET : ${PREFIXE}base.dump" ;;
+  esac
   kubectl wait "$CLUSTER_PG" -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
     || die "CloudNativePG n'est pas prêt : rien n'est arrêté"
 }
 
 cmd_restaurer() {
-  lire_cluster
+  lire_cluster pgadmin
   calculer_empreinte
   controler_prefixe
   version_deployee

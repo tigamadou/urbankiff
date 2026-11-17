@@ -91,3 +91,10 @@ exporter() { # <env> <date>
   absent -q 'valeur-' "$FAKE_LOG"
   [[ "$output" != *"valeur-"* ]]
 }
+
+@test "Secret sans PGADMIN_* : l'export réussit quand même" {
+  grep -v '^PGADMIN_' "$FAKE_STATE/secret.txt" > "$FAKE_STATE/secret.sans"
+  mv "$FAKE_STATE/secret.sans" "$FAKE_STATE/secret.txt"
+  exporter prod 2026-11-17
+  [ "$status" -eq 0 ]
+}
