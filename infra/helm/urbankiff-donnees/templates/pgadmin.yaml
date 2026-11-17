@@ -83,6 +83,9 @@ spec:
                   key: PGADMIN_MOT_DE_PASSE
             - name: PGADMIN_LISTEN_PORT
               value: {{ $pga.port | quote }}
+            # L'entrypoint écrit config_distro.py (PGADMIN_CONFIG_*) : la racine est en lecture seule
+            - name: PGADMIN_CUSTOM_CONFIG_DISTRO_FILE
+              value: /var/lib/pgadmin/config_distro.py
             - name: PGADMIN_CONFIG_SERVER_MODE
               value: "True"
             - name: PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED
@@ -108,8 +111,18 @@ spec:
             timeoutSeconds: 3
           resources:
             {{- toYaml $pga.ressources | nindent 12 }}
+          # Le python de l'image porte cap_net_bind_service=eip : sans cette capability dans l'ensemble borné,
+          # execve échoue (« Operation not permitted »). Aucune escalade : allowPrivilegeEscalation reste false.
           securityContext:
-            {{- include "urbankiff.securityContextConteneur" . | nindent 12 }}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
           volumeMounts:
             - name: donnees
               mountPath: /var/lib/pgadmin

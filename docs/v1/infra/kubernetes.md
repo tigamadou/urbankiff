@@ -144,7 +144,8 @@ preprod autour de 03:30.
 
 Tous les pods rendus (Deployments, StatefulSets, Jobs, CronJobs, init-conteneurs compris) : `runAsNonRoot`, UID
 explicite non nul (10001), `seccompProfile: RuntimeDefault`, `allowPrivilegeEscalation: false`,
-`capabilities.drop: [ALL]`, `readOnlyRootFilesystem: true` avec des `emptyDir` sur `/tmp` (et `/app/.next/cache` pour
+`capabilities.drop: [ALL]` (seule exception : `NET_BIND_SERVICE` rendue au conteneur pgAdmin, dont le python porte
+cette capability fichier ; voir `outils-donnees.md`), `readOnlyRootFilesystem: true` avec des `emptyDir` sur `/tmp` (et `/app/.next/cache` pour
 Next), `requests` et `limits` mémoire sur chaque conteneur, `automountServiceAccountToken: false`, sondes `readiness`
 et `liveness` sur les Deployments et StatefulSets. Les workers n'ont pas de port : leurs sondes vérifient seulement que
 le processus (PID 1) existe. Les sondes de l'api envoient l'en-tête `Host` du nom public de l'api (sinon Django refuse
