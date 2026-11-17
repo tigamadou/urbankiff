@@ -252,32 +252,86 @@ hibernation() { # <on|off>
   [ "$actuelle" = "$1" ] || kubectl annotate "$CLUSTER_PG" -n "$NAMESPACE" "cnpg.io/hibernation=$1" --overwrite
 }
 
+mettre_a_zero() { # <deployment|statefulset> : note les réplicas, sans écraser la note d'une charge déjà à zéro
+  local nom replicas avant
+  while read -r nom replicas avant; do
+    [ -n "$nom" ] && [ "$replicas" != 0 ] || continue
+    kubectl annotate "$1/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS=$replicas" --overwrite
+    kubectl scale "$1/$nom" -n "$NAMESPACE" --replicas=0
+  done < <(charges "$1")
+}
+
+remettre_a_lechelle() { # <deployment|statefulset>
+  local nom replicas avant
+  while read -r nom replicas avant; do
+    [ -n "$nom" ] && [ "$replicas" = 0 ] && [[ "${avant:-}" =~ ^[1-9][0-9]*$ ]] || continue
+    kubectl scale "$1/$nom" -n "$NAMESPACE" --replicas="$avant"
+    kubectl annotate "$1/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS-"
+  done < <(charges "$1")
+}
+
 cmd_preprod_arret() {
-  local genre nom replicas avant
-  for genre in deployment statefulset; do
-    while read -r nom replicas avant; do
-      [ -n "$nom" ] && [ "$replicas" != 0 ] || continue
-      kubectl annotate "$genre/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS=$replicas" --overwrite
-      kubectl scale "$genre/$nom" -n "$NAMESPACE" --replicas=0
-    done < <(charges "$genre")
-  done
+  local genre
+  for genre in deployment statefulset; do mettre_a_zero "$genre"; done
   hibernation on
   log "preprod arrêtée"
 }
 
 cmd_preprod_demarrage() {
-  local genre nom replicas avant
+  local genre
   hibernation off
   kubectl wait "$CLUSTER_PG" -n "$NAMESPACE" --for=condition=Ready --timeout=600s \
     || die "CloudNativePG n'est pas prêt : les charges ne sont pas relancées"
-  for genre in deployment statefulset; do
-    while read -r nom replicas avant; do
-      [ -n "$nom" ] && [ "$replicas" = 0 ] && [[ "${avant:-}" =~ ^[1-9][0-9]*$ ]] || continue
-      kubectl scale "$genre/$nom" -n "$NAMESPACE" --replicas="$avant"
-      kubectl annotate "$genre/$nom" -n "$NAMESPACE" "$ANNOTATION_REPLICAS-"
-    done < <(charges "$genre")
-  done
+  for genre in deployment statefulset; do remettre_a_lechelle "$genre"; done
   log "preprod démarrée"
+}
+
+version_deployee() {
+  local lue
+  lue="$(helm get values urbankiff -n "$NAMESPACE" -o yaml | awk '/^image:/ {dans=1; next} /^[^ ]/ {dans=0} dans && $1 == "etiquette:" {gsub(/["\047]/, "", $2); print $2; exit}')" \
+    || die "application non déployée : version introuvable"
+  [[ "$lue" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "application non déployée : version introuvable"
+  VERSION="$lue"
+}
+
+rendre_job() { # <chart> <release> <gabarit> [--set k=v ...] : manifeste rendu dans MANIFESTE
+  local chart="$1" release="$2" gabarit="$3"
+  shift 3
+  helm get values "$release" -n "$NAMESPACE" -o yaml > "$TMP/valeurs-$release.yaml" \
+    || die "valeurs de la release $release introuvables"
+  MANIFESTE="$(helm template "$release" "$TMP/charts/$chart" -n "$NAMESPACE" \
+    -f "$TMP/charts/$chart/values-$ENV.yaml" -f "$TMP/valeurs-$release.yaml" \
+    --show-only "templates/$gabarit" "$@")" || die "rendu de $gabarit impossible"
+  [ -n "$MANIFESTE" ] || die "le Job n'est pas rendu : $gabarit"
+}
+
+lancer_job() { # <nom> : un Job du même nom resté d'une tentative précédente est supprimé d'abord
+  kubectl delete job "$1" -n "$NAMESPACE" --ignore-not-found
+  printf '%s\n' "$MANIFESTE" | kubectl apply -n "$NAMESPACE" -f -
+}
+
+suivre_job() { # <nom> <journal de fin, vide si non exigé> : le Job d'un échec est conservé pour l'enquête
+  local nom="$1" fin="$2" etat reussis echecs essai journaux
+  for ((essai = 0; essai < ${URBANKIFF_JOB_TENTATIVES:-360}; essai++)); do
+    etat="$(kubectl get job "$nom" -n "$NAMESPACE" -o jsonpath='{.status.succeeded}/{.status.failed}')"
+    reussis="${etat%%/*}"; echecs="${etat#*/}"
+    if [[ "$reussis" =~ ^[1-9] ]]; then
+      journaux="$(kubectl logs "job/$nom" -n "$NAMESPACE" --all-containers --tail=200)" || journaux=""
+      if [ -n "$fin" ] && [[ "$journaux" != *"$fin"* ]]; then
+        printf '%s\n' "$journaux" >&2
+        die "le Job $nom est terminé sans le journal « $fin » : conservé pour l'enquête"
+      fi
+      kubectl delete job "$nom" -n "$NAMESPACE" --ignore-not-found
+      return 0
+    fi
+    if [[ "$echecs" =~ ^[1-9] ]]; then
+      kubectl logs "job/$nom" -n "$NAMESPACE" --all-containers --tail=200 >&2 || true
+      die "le Job $nom a échoué : conservé pour l'enquête (kubectl logs job/$nom -n $NAMESPACE)"
+    fi
+    sleep 5
+  done
+  kubectl logs "job/$nom" -n "$NAMESPACE" --all-containers --tail=200 >&2 || true
+  die "le Job $nom n'est pas terminé après le délai : conservé pour l'enquête"
 }
 
 cmd_restaurer() { log "restauration de $PREFIXE"; }

@@ -40,7 +40,7 @@ autorité). Plan de la mission `outils-donnees`, lot 5 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 3
+Statut : 🟡 en cours · Prochaine tâche : 4
 
 - [x] **Tâche 1** Faux binaires étendus, clés `PGADMIN_*` dans `SECRET_KEYS`, tests d'inventaire tolérants · `feature/outils-donnees-deploiement`
   - [x] bats : aide commune, `inventaire-cles.bats` tolérant, tests existants adaptés
@@ -48,9 +48,9 @@ Statut : 🟡 en cours · Prochaine tâche : 3
 - [x] **Tâche 2** Script : analyse des commandes `restaurer` et `exporter-anonyme`, clé `BUCKET_COPIE_PREPROD`
   - [x] bats : motifs, refus, verrou, configuration
   - [x] implémentation
-- [ ] **Tâche 3** Script : aides communes (arrêt et remise des réplicas, version déployée, rendu et suivi d'un Job)
-  - [ ] bats : non-régression de `preprod-arret` et `preprod-demarrage`, rendu, suivi
-  - [ ] implémentation
+- [x] **Tâche 3** Script : aides communes (arrêt et remise des réplicas, version déployée, rendu et suivi d'un Job)
+  - [x] bats : non-régression de `preprod-arret` et `preprod-demarrage`, rendu, suivi
+  - [x] implémentation
 - [ ] **Tâche 4** Script : action `restaurer` complète
   - [ ] bats : contrôle du préfixe Wasabi, déroulé, ordre, échecs qui laissent l'application arrêtée, relance
   - [ ] implémentation
