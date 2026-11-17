@@ -61,6 +61,8 @@ Toutes lancées depuis le worktree : `make test-cible T=<chemins>`, `make covera
 - Check requis : `ci-ok`
 - Déclenché sur toute PR ; les jobs ne tournent que pour les applications touchées. `gh` authentifié
   (`gh auth status`).
+- Job `infra` (cibles `make deploiement-test`, `make secrets-test`, `make helm-controle`) : lancé seulement si la PR
+  touche `infra/`, `scripts/secrets/`, `make/`, `Makefile`, `docs/v1/infra/`, `.github/workflows/` ou `.gitleaks.toml`.
 - Le check n'est pas imposé par GitHub (pas de protection de branche sur GitHub Free) : aucun agent ne fusionne une
   PR dont `ci-ok` n'est pas vert.
 
