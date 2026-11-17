@@ -3,8 +3,8 @@
 
 load aide
 
-ID_REPERE='Valeur-Repere-Id-4kz'
-SECRET_REPERE='Valeur-Repere-Secret-9qw'
+ID_REPERE='Valeur-Repere-Id-4kz'  # gitleaks:allow
+SECRET_REPERE='Valeur-Repere-Secret-9qw'  # gitleaks:allow
 
 setup() {
   RACINE="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
