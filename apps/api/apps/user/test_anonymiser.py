@@ -6,11 +6,13 @@ from unittest import mock
 
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
+from django.db import connection
 from django.core.management.base import CommandError, OutputWrapper
 from django.test import SimpleTestCase, TestCase
 
 from apps.user.factories import UserFactory
-from apps.user.management.commands.anonymiser import REGLES_PAR_DEFAUT, appliquer, charger_regles
+from apps.user.management.commands.anonymiser import (
+    REGLES_PAR_DEFAUT, appliquer, charger_regles, est_suspecte, lire_schema, verifier_classement)
 from apps.user.models import Invitation, User
 
 REGLES_VIDES = {
@@ -30,6 +32,25 @@ def ecrire_regles(testcase, contenu):
     return fichier.name
 
 
+MOTIFS = ["email", "contact", "name", "ip", "addr", "token", "password"]
+
+
+def regles_de_test(vider=(), classees=None):
+    schema = lire_schema(connection)
+    classees = classees or {}
+    regles = dict(REGLES_VIDES, motifs_suspects=MOTIFS, tables_a_vider=list(vider), tables_classees={})
+    for table, contenu in classees.items():
+        colonnes = {c: dict(contenu.get(c, {"action": "garder"})) for c in schema[table]}
+        for regle in colonnes.values():
+            if regle["action"] == "garder":
+                regle["justification"] = "test"
+        regles["tables_classees"][table] = {"cle": "id", "colonnes": colonnes}
+    regles["sans_donnees_personnelles"] = {
+        table: {c: "test" for c in colonnes if est_suspecte(c, MOTIFS)}
+        for table, colonnes in schema.items() if table not in vider and table not in classees}
+    return regles
+
+
 def environnement(**valeurs):
     base = {k: v for k, v in os.environ.items() if k not in ("ANONYMISATION_AUTORISEE", "POSTGRES_HOST")}
     base.update(valeurs)
@@ -39,7 +60,7 @@ def environnement(**valeurs):
 class GardeFouEnvironnementTests(TestCase):
     def setUp(self):
         self.utilisateur = UserFactory(email="origine@exemple.org")
-        self.regles = ecrire_regles(self, REGLES_VIDES)
+        self.regles = ecrire_regles(self, regles_de_test())
 
     def lancer(self):
         call_command("anonymiser", regles=self.regles, stdout=StringIO())
@@ -301,3 +322,86 @@ class MoteurTests(TestCase):
             appliquer_regles(regles)
         self.assertEqual(ctx.exception.returncode, 1)
         self.assertTrue(User.objects.filter(email="a@vrai.org").exists())
+
+
+def schema_synthetique():
+    return {"t": ["id", "email", "titre"], "autre": ["id", "titre"]}
+
+
+def regles_synthetiques(**modifs):
+    regles = dict(REGLES_VIDES, motifs_suspects=["email", "phone", "ip", "addr", "contact", "name"])
+    regles["tables_classees"] = {"t": {"cle": "id", "colonnes": {
+        "id": {"action": "garder"},
+        "email": {"action": "anonymiser", "traitement": "valeur_fixe", "valeur": None},
+        "titre": {"action": "garder"}}}}
+    regles["sans_donnees_personnelles"] = {"autre": {}}
+    regles.update(modifs)
+    return regles
+
+
+class VerifierClassementTests(SimpleTestCase):
+    def test_schema_complet(self):
+        self.assertEqual(verifier_classement(regles_synthetiques(), schema_synthetique()), [])
+
+    def test_colonne_non_classee(self):
+        schema = schema_synthetique()
+        schema["t"].append("phone")
+        self.assertEqual(verifier_classement(regles_synthetiques(), schema), ["colonne non classée : t.phone"])
+
+    def test_table_nouvelle_non_classee(self):
+        schema = dict(schema_synthetique(), nouvelle_table=["id", "email"])
+        self.assertEqual(verifier_classement(regles_synthetiques(), schema), ["table non classée : nouvelle_table"])
+        schema["nouvelle_table"] = ["id", "titre"]
+        self.assertEqual(verifier_classement(regles_synthetiques(), schema), ["table non classée : nouvelle_table"])
+
+    def test_colonne_suspecte_sans_donnees_personnelles(self):
+        schema = dict(schema_synthetique(), autre=["id", "contact_name"])
+        self.assertEqual(verifier_classement(regles_synthetiques(), schema),
+                         ["colonne suspecte sans justification : autre.contact_name"])
+        regles = regles_synthetiques(sans_donnees_personnelles={"autre": {"contact_name": "nom de rubrique"}})
+        self.assertEqual(verifier_classement(regles, schema), [])
+        regles = regles_synthetiques(sans_donnees_personnelles={"autre": {"contact_name": "  "}})
+        self.assertEqual(len(verifier_classement(regles, schema)), 1)
+
+    def test_colonne_suspecte_gardee_sans_justification(self):
+        schema = schema_synthetique()
+        schema["t"].append("ip_address")
+        regles = regles_synthetiques()
+        regles["tables_classees"]["t"]["colonnes"]["ip_address"] = {"action": "garder"}
+        self.assertEqual(verifier_classement(regles, schema),
+                         ["colonne suspecte gardée sans justification : t.ip_address"])
+        regles["tables_classees"]["t"]["colonnes"]["ip_address"]["justification"] = "adresse du serveur"
+        self.assertEqual(verifier_classement(regles, schema), [])
+
+    def test_regles_perimees(self):
+        regles = regles_synthetiques(tables_a_vider=["disparue"])
+        regles["tables_classees"]["t"]["colonnes"]["phone"] = {"action": "garder"}
+        self.assertEqual(verifier_classement(regles, schema_synthetique()), [
+            "règle périmée, la table n'existe plus : disparue",
+            "règle périmée, la colonne n'existe plus : t.phone",
+        ])
+
+    def test_detection_par_mot(self):
+        motifs = ["ip", "addr"]
+        self.assertFalse(est_suspecte("description", motifs))
+        self.assertTrue(est_suspecte("ip_address", motifs))
+        self.assertTrue(est_suspecte("remote_addr", motifs))
+
+
+class ClassementReelTests(TestCase):
+    def test_table_non_classee_signalee_et_commande_en_echec(self):
+        utilisateur = UserFactory(email="origine@exemple.org")
+        with connection.cursor() as curseur:
+            curseur.execute("CREATE TABLE zz_nouvelle (id serial, email varchar(50))")
+        regles = regles_de_test()
+        del regles["sans_donnees_personnelles"]["zz_nouvelle"]
+        self.assertEqual([p for p in verifier_classement(regles, lire_schema(connection)) if "zz_" in p],
+                         ["table non classée : zz_nouvelle"])
+        chemin = ecrire_regles(self, regles)
+        with environnement(ANONYMISATION_AUTORISEE="1", POSTGRES_HOST="localhost"):
+            with self.assertRaises(CommandError) as ctx:
+                call_command("anonymiser", regles=chemin, stdout=StringIO())
+        self.assertEqual(ctx.exception.returncode, 1)
+        self.assertIn("zz_nouvelle", str(ctx.exception))
+        utilisateur.refresh_from_db()
+        self.assertEqual(utilisateur.email, "origine@exemple.org")

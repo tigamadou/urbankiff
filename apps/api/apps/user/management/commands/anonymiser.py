@@ -96,6 +96,54 @@ def expression_et_parametres(regle, cle):
     return "%s", [valeur]
 
 
+def lire_schema(connexion):
+    with connexion.cursor() as curseur:
+        return {table: [colonne.name for colonne in connexion.introspection.get_table_description(curseur, table)]
+                for table in connexion.introspection.table_names(curseur)}
+
+
+def est_suspecte(colonne, motifs):
+    return any(mot in motifs for mot in colonne.lower().split("_"))
+
+
+def justifiee(valeur):
+    return isinstance(valeur, str) and valeur.strip() != ""
+
+
+def verifier_classement(regles, schema):
+    motifs = set(regles["motifs_suspects"])
+    problemes = []
+    videes = set(regles["tables_a_vider"])
+    classees = regles["tables_classees"]
+    sans = regles["sans_donnees_personnelles"]
+    for table in sorted(schema):
+        if table not in videes and table not in classees and table not in sans:
+            problemes.append("table non classée : %s" % table)
+    for table in sorted(videes | set(classees) | set(sans)):
+        if table not in schema:
+            problemes.append("règle périmée, la table n'existe plus : %s" % table)
+    for table, contenu in sorted(classees.items()):
+        if table not in schema:
+            continue
+        for colonne in schema[table]:
+            regle = contenu["colonnes"].get(colonne)
+            if regle is None:
+                problemes.append("colonne non classée : %s.%s" % (table, colonne))
+            elif regle["action"] == "garder" and est_suspecte(colonne, motifs) \
+                    and not justifiee(regle.get("justification")):
+                problemes.append("colonne suspecte gardée sans justification : %s.%s" % (table, colonne))
+        for colonne in contenu["colonnes"]:
+            if colonne not in schema[table]:
+                problemes.append("règle périmée, la colonne n'existe plus : %s.%s" % (table, colonne))
+    for table, justifications in sorted(sans.items()):
+        if table not in schema:
+            continue
+        for colonne in schema[table]:
+            if est_suspecte(colonne, motifs) and not justifiee(justifications.get(colonne)):
+                problemes.append("colonne suspecte sans justification : %s.%s" % (table, colonne))
+    return problemes
+
+
 def appliquer(regles, stdout):
     quote = connection.ops.quote_name
     try:
@@ -127,4 +175,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         verifier_environnement()
-        appliquer(charger_regles(options["regles"]), self.stdout)
+        regles = charger_regles(options["regles"])
+        problemes = verifier_classement(regles, lire_schema(connection))
+        if problemes:
+            raise CommandError("classement incomplet, rien n'a été modifié :\n" + "\n".join(problemes), returncode=1)
+        appliquer(regles, self.stdout)
