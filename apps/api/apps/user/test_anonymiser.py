@@ -5,7 +5,27 @@ from io import StringIO
 from unittest import mock
 
 from django.contrib.sessions.models import Session
+from datetime import date, timedelta
+
 from django.apps import apps as registre_apps
+from django.contrib.admin.models import ADDITION, LogEntry
+from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
+from oauth2_provider.models import AccessToken, Application, RefreshToken
+from push_notifications.models import GCMDevice
+from rest_framework.authtoken.models import Token
+from rest_framework_tracking.models import APIRequestLog
+from rolepermissions.roles import assign_role
+from social_django.models import UserSocialAuth
+
+from apps.category.models import Category
+from apps.comment.models import Comment, Report
+from apps.error.models import Error
+from apps.file.models import File
+from apps.mail.models import OTP, Mail
+from apps.post.models import Post, PostView
+from apps.user.models import Device, PasswordResetToken
+from apps.workers.models import Task
 from django.core.management import call_command
 from django.db import connection
 from django.core.management.base import CommandError, OutputWrapper
@@ -424,3 +444,166 @@ class ReglesLivreesTests(TestCase):
         schema = lire_schema(connection)
         for table in set(regles["tables_a_vider"]) | set(regles["tables_classees"]):
             self.assertIn(table, schema)
+
+
+VALEURS_INTERDITES = ["sentinelle", "vrai-domaine", "22998877665", "203.0.113.7", "1990-05-17"]
+MOT_DE_PASSE = "sentinelle-mot-de-passe"
+
+
+def creer_jeu_de_sentinelles():
+    maintenant = timezone.now()
+    jeu = {}
+    jeu["utilisateur"] = utilisateur = UserFactory(
+        email="sentinelle.1@vrai-domaine.org", contact=22998877665, firstname="sentinelle-prenom",
+        lastname="sentinelle-nom", username="sentinelle-login", bio="sentinelle bio", address="sentinelle adresse",
+        birthday=date(1990, 5, 17), id_img="uploads/sentinelle-piece.jpg", nationality="sentinelle",
+        residence_country="sentinelle", avatar="uploads/sentinelle-avatar.jpg", status="active")
+    utilisateur.set_password(MOT_DE_PASSE)
+    utilisateur.save()
+    jeu["admin"] = admin = UserFactory(
+        email="urbankiff@admin.com", username="sentinelle-admin", is_superuser=True, is_staff=True)
+    admin.set_password(MOT_DE_PASSE)
+    admin.save()
+    assign_role(admin, "administrator")
+    utilisateur.devices.add(Device.objects.create(registration_id="sentinelle-appareil"))
+    PasswordResetToken.objects.create(user=utilisateur, token="sentinelle-reinit")
+    Invitation.objects.create(inviter=admin, invitee_email="sentinelle.invite@vrai-domaine.org",
+                              token="sentinelle-invitation", message="sentinelle message")
+    OTP.objects.create(email="sentinelle.otp@vrai-domaine.org", otp="123456")
+    Mail.objects.create(data={"email": "sentinelle.mail@vrai-domaine.org", "nom": "sentinelle"}, name="x",
+                        to_email="sentinelle.mail@vrai-domaine.org", body="sentinelle", subject="sentinelle",
+                        api_response_text="sentinelle", user=utilisateur)
+    Error.objects.create(message={"e": "sentinelle"}, ip="203.0.113.77", platform="sentinelle", browser="sentinelle")
+    Token.objects.create(user=utilisateur)
+    Session.objects.create(session_key="sentinelle-session", session_data="sentinelle", expire_date=maintenant)
+    application = Application.objects.create(
+        user=admin, name="Appli", client_id="identifiant-public-appli", client_secret="sentinelle-secret",
+        client_type="confidential", authorization_grant_type="password")
+    acces = AccessToken.objects.create(
+        user=utilisateur, token="sentinelle-acces", application=application, expires=maintenant + timedelta(days=1),
+        scope="read")
+    RefreshToken.objects.create(user=utilisateur, token="sentinelle-rafraichissement", application=application,
+                                access_token=acces)
+    UserSocialAuth.objects.create(user=utilisateur, provider="google-oauth2", uid="sentinelle-uid",
+                                  extra_data={"email": "sentinelle.google@vrai-domaine.org"})
+    GCMDevice.objects.create(user=utilisateur, registration_id="sentinelle-gcm", device_id="0x1234")
+    APIRequestLog.objects.create(remote_addr="203.0.113.77", path="/sentinelle", host="vrai-domaine.org",
+                                 method="GET", requested_at=maintenant, query_params="email=sentinelle", username_persistent="sentinelle")
+    LogEntry.objects.create(user=admin, content_type=ContentType.objects.get_for_model(User), object_id="1",
+                            object_repr="sentinelle.admin@vrai-domaine.org", action_flag=ADDITION,
+                            change_message="sentinelle")
+    categorie = Category.objects.create(name="Rubrique", color="red")
+    article = Post.objects.create(title="Titre public", intro="intro", content="contenu", url="u", image="i.jpg",
+                                  author=utilisateur, category=categorie)
+    commentaire = Comment.objects.create(content="Commentaire public")
+    Report.objects.create(reason="Spam", ip="203.0.113.77", browser="sentinelle-navigateur", post=article,
+                          comment=commentaire, reporter=utilisateur)
+    PostView.objects.create(post=article, ip_address="203.0.113.78", user_agent="sentinelle-agent")
+    Task.objects.create(handler="h", args='["sentinelle.task@vrai-domaine.org"]', kwargs='{"a": "sentinelle"}',
+                        error="sentinelle", run_at=maintenant)
+    File.objects.create(owner=utilisateur, name="fichier.jpg", mime_type="image/jpeg")
+    return jeu
+
+
+def lire_tout(tables):
+    contenu = {}
+    with connection.cursor() as curseur:
+        for table, colonnes in tables.items():
+            selection = ", ".join('"%s"::text' % c for c in colonnes)
+            curseur.execute('SELECT %s FROM "%s"' % (selection, table))
+            contenu[table] = curseur.fetchall()
+    return contenu
+
+
+def photographier_colonnes_anonymisees(regles):
+    photo = {}
+    with connection.cursor() as curseur:
+        for table, contenu in regles["tables_classees"].items():
+            for colonne, regle in contenu["colonnes"].items():
+                if regle["action"] == "anonymiser":
+                    curseur.execute('SELECT "%s", "%s"::text FROM "%s"' % (contenu["cle"], colonne, table))
+                    photo[(table, colonne)] = dict(curseur.fetchall())
+    return photo
+
+
+class AucuneValeurOrigineTests(TestCase):
+    def setUp(self):
+        self.jeu = creer_jeu_de_sentinelles()
+        self.regles = charger_regles(REGLES_PAR_DEFAUT)
+        self.avant = photographier_colonnes_anonymisees(self.regles)
+        self.comptes = {t: User.objects.count() for t in ("user_user",)}
+        with connection.cursor() as curseur:
+            self.lignes_classees = {}
+            for table in self.regles["tables_classees"]:
+                curseur.execute('SELECT count(*) FROM "%s"' % table)
+                self.lignes_classees[table] = curseur.fetchone()[0]
+
+    def lancer(self):
+        with environnement(ANONYMISATION_AUTORISEE="1", POSTGRES_HOST="127.0.0.1"):
+            call_command("anonymiser", stdout=StringIO())
+
+    def compter(self, table):
+        with connection.cursor() as curseur:
+            curseur.execute('SELECT count(*) FROM "%s"' % table)
+            return curseur.fetchone()[0]
+
+    def test_balayage_global_aucune_valeur_d_origine(self):
+        self.lancer()
+        schema = lire_schema(connection)
+        for table, lignes in lire_tout(schema).items():
+            for ligne in lignes:
+                for valeur in ligne:
+                    for interdite in VALEURS_INTERDITES:
+                        self.assertNotIn(interdite, valeur or "", "valeur d'origine dans %s" % table)
+
+    def test_tables_videes(self):
+        self.lancer()
+        for table in self.regles["tables_a_vider"]:
+            self.assertEqual(self.compter(table), 0, table)
+
+    def test_colonnes_anonymisees_changees_et_colonnes_gardees_intactes(self):
+        self.lancer()
+        apres = photographier_colonnes_anonymisees(self.regles)
+        for cle, valeurs in self.avant.items():
+            for identifiant, origine in valeurs.items():
+                if origine not in (None, ""):
+                    self.assertNotEqual(apres[cle][identifiant], origine, cle)
+        for table, nombre in self.lignes_classees.items():
+            self.assertEqual(self.compter(table), nombre, table)
+        article = Post.objects.get()
+        self.assertEqual((article.title, article.author_id), ("Titre public", self.jeu["utilisateur"].id))
+        self.assertEqual(Category.objects.get().name, "Rubrique")
+        self.assertEqual(File.objects.get().name, "fichier.jpg")
+        self.assertEqual(Comment.objects.get().content, "Commentaire public")
+        self.assertEqual(Report.objects.get().reason, "Spam")
+
+    def test_mots_de_passe_inutilisables_et_emails_introuvables(self):
+        self.lancer()
+        for utilisateur in User.objects.all():
+            self.assertFalse(utilisateur.has_usable_password())
+            self.assertFalse(utilisateur.check_password(MOT_DE_PASSE))
+        self.assertFalse(User.objects.filter(email="sentinelle.1@vrai-domaine.org").exists())
+        utilisateur = User.objects.get(id=self.jeu["utilisateur"].id)
+        self.assertEqual(utilisateur.email, "user-%d@exemple.invalid" % utilisateur.id)
+        self.assertEqual(utilisateur.avatar, "images/fck2c7a8-gc4v-4q3s-behi-5fhnqti9mak4.jpg")
+        self.assertIsNone(utilisateur.id_img)
+
+    def test_second_passage_idempotent(self):
+        self.lancer()
+        colonnes = {t: [c for c in cs if not (t, c) in {("user_user", "password"),
+                                                         ("oauth2_provider_application", "client_secret")}]
+                    for t, cs in lire_schema(connection).items() if t in self.regles["tables_classees"]}
+        premier = lire_tout(colonnes)
+        self.lancer()
+        self.assertEqual(lire_tout(colonnes), premier)
+
+    def test_compatibilite_prodseed(self):
+        ancien_id = self.jeu["admin"].id
+        self.lancer()
+        with environnement(DJANGO_SUPERUSER_PASSWORD="Mot-De-Passe-Preprod-42"):
+            call_command("prodseed", stdout=StringIO())
+        nouveau = User.objects.get(email="urbankiff@admin.com")
+        self.assertTrue(nouveau.check_password("Mot-De-Passe-Preprod-42"))
+        ancien = User.objects.get(id=ancien_id)
+        self.assertEqual(ancien.email, "user-%d@exemple.invalid" % ancien_id)
+        self.assertFalse(ancien.has_usable_password())

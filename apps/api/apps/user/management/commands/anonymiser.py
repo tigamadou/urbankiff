@@ -149,6 +149,7 @@ def appliquer(regles, stdout):
     try:
         with transaction.atomic():
             with connection.cursor() as curseur:
+                curseur.execute("SET CONSTRAINTS ALL DEFERRED")
                 for table in regles["tables_a_vider"]:
                     curseur.execute("DELETE FROM " + quote(table))
                     stdout.write("anonymiser : %s : %d ligne(s) supprimée(s)" % (table, curseur.rowcount))
