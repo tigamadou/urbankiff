@@ -597,7 +597,7 @@ class AucuneValeurOrigineTests(TestCase):
     def test_compatibilite_prodseed(self):
         ancien_id = self.jeu["admin"].id
         self.lancer()
-        with environnement(DJANGO_SUPERUSER_PASSWORD="Mot-De-Passe-Preprod-42"):
+        with environnement(DJANGO_SUPERUSER_PASSWORD="Mot-De-Passe-Preprod-42"):  # gitleaks:allow
             call_command("prodseed", stdout=StringIO())
         nouveau = User.objects.get(email="urbankiff@admin.com")
         self.assertTrue(nouveau.check_password("Mot-De-Passe-Preprod-42"))
