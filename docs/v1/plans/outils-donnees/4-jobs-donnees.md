@@ -39,7 +39,7 @@ autorité). Plan de la mission `outils-donnees`, lot 4 sur 7.
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 5
+Statut : ✅ terminé
 
 - [x] **Tâche 1** Job de restauration : remise à zéro du schéma, sans purge, rendu à la demande · `feature/outils-donnees-jobs-donnees`
   - [x] tests `restauration_test.yaml` réécrits (échec attendu)
@@ -51,7 +51,7 @@ Statut : 🟡 en cours · Prochaine tâche : 5
   - [x] tests `export_anonyme_test.yaml`
   - [x] `export-anonyme-job.yaml` et valeurs `exportAnonyme`, `image.postgres`, `wasabi`
 - [x] **Tâche 4** Documentation : section « Restauration et copie » de `kubernetes.md`
-- [ ] **Tâche 5** Vérification du lot
+- [x] **Tâche 5** Vérification du lot
 
 > Reprise : (vide)
 
