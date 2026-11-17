@@ -1,2 +1,37 @@
+{{- $env := include "urbankiff.environnement" . -}}
 {{- $db := required "hosts.db est obligatoire" .Values.hosts.db -}}
 {{- $stockage := required "hosts.stockage est obligatoire" .Values.hosts.stockage -}}
+{{- $ctx := . -}}
+{{- $ns := .Release.Namespace -}}
+{{- $middlewares := printf "%s-urbankiff-outils-limite-debit@kubernetescrd,%s-urbankiff-outils-entetes@kubernetescrd" $ns $ns -}}
+{{- range $i, $r := list (dict "nom" "pgadmin" "composant" "pgadmin" "hote" $db "tls" "urbankiff-db-tls" "service" "urbankiff-pgadmin" "port" $ctx.Values.pgadmin.port) (dict "nom" "stockage" "composant" "rustfs" "hote" $stockage "tls" "urbankiff-stockage-tls" "service" "urbankiff-rustfs" "port" $ctx.Values.rustfs.console.port) }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: urbankiff-{{ $r.nom }}
+  labels:
+    {{- include "urbankiff.labels" (dict "ctx" $ctx "composant" $r.composant) | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $ctx.Values.ingress.clusterIssuer }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ $middlewares }}
+spec:
+  ingressClassName: {{ $ctx.Values.ingress.classe }}
+  tls:
+    - hosts:
+        - {{ $r.hote }}
+      secretName: {{ $r.tls }}
+  rules:
+    - host: {{ $r.hote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $r.service }}
+                port:
+                  number: {{ $r.port }}
+{{- end }}

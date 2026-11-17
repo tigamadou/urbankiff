@@ -2,9 +2,185 @@ suite: outils
 templates:
   - templates/outils-ingress.yaml
   - templates/pgadmin.yaml
+  - templates/outils-middlewares.yaml
 values:
   - valeurs-communes.yaml
+release:
+  namespace: urbankiff-preprod
 tests:
+  - it: hosts.stockage est obligatoire
+    template: templates/outils-ingress.yaml
+    set:
+      hosts.stockage: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: hosts.stockage est obligatoire
+  - it: deux Ingress cert-manager et Traefik, TLS par hôte, backends sur les bons Services
+    template: templates/outils-ingress.yaml
+    asserts:
+      - isKind:
+          of: Ingress
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-pgadmin
+        documentIndex: 0
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+        documentIndex: 0
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt
+        documentIndex: 0
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: preprod.db.urbankiff.com
+        documentIndex: 0
+      - equal:
+          path: spec.tls[0].secretName
+          value: urbankiff-db-tls
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].host
+          value: preprod.db.urbankiff.com
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-pgadmin
+            port:
+              number: 8080
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: urbankiff-stockage
+        documentIndex: 1
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+        documentIndex: 1
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt
+        documentIndex: 1
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: preprod.stockage.urbankiff.com
+        documentIndex: 1
+      - equal:
+          path: spec.tls[0].secretName
+          value: urbankiff-stockage-tls
+        documentIndex: 1
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: urbankiff-rustfs
+            port:
+              number: 9001
+        documentIndex: 1
+  - it: annotation router.middlewares avec le namespace de la release, sur les deux Ingress
+    template: templates/outils-ingress.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
+          value: urbankiff-preprod-urbankiff-outils-limite-debit@kubernetescrd,urbankiff-preprod-urbankiff-outils-entetes@kubernetescrd
+        documentIndex: 0
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
+          value: urbankiff-preprod-urbankiff-outils-limite-debit@kubernetescrd,urbankiff-preprod-urbankiff-outils-entetes@kubernetescrd
+        documentIndex: 1
+  - it: aucun hôte s3, aucun entrypoint non TLS
+    template: templates/outils-ingress.yaml
+    asserts:
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: ^(preprod\.)?s3
+        documentIndex: 0
+      - notMatchRegex:
+          path: spec.rules[0].host
+          pattern: ^(preprod\.)?s3
+        documentIndex: 1
+      - notExists:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.entrypoints"]
+        documentIndex: 0
+      - notExists:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.entrypoints"]
+        documentIndex: 1
+  - it: Middleware de limitation de débit issu des valeurs
+    template: templates/outils-middlewares.yaml
+    documentIndex: 0
+    set:
+      ingress.limiteDebit.moyenne: 7
+      ingress.limiteDebit.rafale: 9
+    asserts:
+      - equal:
+          path: apiVersion
+          value: traefik.io/v1alpha1
+      - isKind:
+          of: Middleware
+      - equal:
+          path: metadata.name
+          value: urbankiff-outils-limite-debit
+      - equal:
+          path: spec.rateLimit.average
+          value: 7
+      - equal:
+          path: spec.rateLimit.burst
+          value: 9
+      - equal:
+          path: spec.rateLimit.sourceCriterion.ipStrategy.depth
+          value: 0
+  - it: Middleware d'en-têtes HSTS issu des valeurs
+    template: templates/outils-middlewares.yaml
+    documentIndex: 1
+    set:
+      ingress.hsts.secondes: 100
+    asserts:
+      - equal:
+          path: apiVersion
+          value: traefik.io/v1alpha1
+      - equal:
+          path: metadata.name
+          value: urbankiff-outils-entetes
+      - equal:
+          path: spec.headers.stsSeconds
+          value: 100
+      - equal:
+          path: spec.headers.stsIncludeSubdomains
+          value: true
+      - equal:
+          path: spec.headers.forceSTSHeader
+          value: true
+      - equal:
+          path: spec.headers.contentTypeNosniff
+          value: true
+      - equal:
+          path: spec.headers.frameDeny
+          value: true
+  - it: aucun middleware d'authentification
+    template: templates/outils-middlewares.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - notExists:
+          path: spec.basicAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.forwardAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.digestAuth
+        documentIndex: 0
+      - notExists:
+          path: spec.basicAuth
+        documentIndex: 1
+      - notExists:
+          path: spec.forwardAuth
+        documentIndex: 1
+      - notExists:
+          path: spec.digestAuth
+        documentIndex: 1
   - it: hosts.db est obligatoire
     template: templates/outils-ingress.yaml
     set:
