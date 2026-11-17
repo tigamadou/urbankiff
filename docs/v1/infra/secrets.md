@@ -84,8 +84,12 @@ Posés à la main par le développeur dans chaque environnement GitHub à la mis
 | `DEPLOY_HOST` | variable | nom d'hôte ou adresse du serveur du déploiement |
 | `DEPLOY_KNOWN_HOSTS` | variable | empreinte du serveur (`known_hosts`) pour la connexion SSH de la CI |
 
-Les valeurs Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`) de `preprod` restent factices : avec `sms.actif` faux le
-chart les remplace par des valeurs inertes.
+La preprod utilise le même compte Twilio que la prod : `TWILIO_ACCOUNT_SID` et `TWILIO_AUTH_TOKEN` de `preprod` reçoivent
+les valeurs de la prod (saisie masquée) ; la preprod envoie de vrais SMS.
+
+`MINIO_ROOT_USER` et `MINIO_ROOT_PASSWORD` sont des secrets saisis (masqués) et connus du développeur, qui s'en sert pour
+la console du stockage. Changer la valeur d'un environnement déjà en service demande de redémarrer RustFS.
+`PGADMIN_EMAIL` et `PGADMIN_MOT_DE_PASSE` donnent l'accès à pgAdmin.
 
 ## Anciens secrets et configurations retirés
 

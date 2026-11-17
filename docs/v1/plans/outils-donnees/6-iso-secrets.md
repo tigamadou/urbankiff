@@ -38,7 +38,7 @@ autorité ; § 2 objectif 7, § 5.1, § 5.5, § 8.3 lignes « Iso (lot 6) » et 
 
 ## Avancement
 
-Statut : 🟡 en cours · Prochaine tâche : 4
+Statut : 🟡 en cours · Prochaine tâche : 5
 
 - [x] **Tâche 1** Secrets : nouveaux secrets, saisie masquée, clés des variables · `feature/outils-donnees-iso-secrets`
   - [x] Tests bats d'abord (`inventaire.bats`), vus en échec
@@ -49,7 +49,7 @@ Statut : 🟡 en cours · Prochaine tâche : 4
 - [x] **Tâche 3** Brancher le contrôle d'iso sur les deux charts et adapter le contrôle Twilio
   - [x] `controle.rb` d'abord (échec : preprod sans SMS), puis `values-preprod.yaml` (`sms.actif: true`)
   - [x] Inventaire sans exception « inerte »
-- [ ] **Tâche 4** Documentation (`secrets.md`, section « Iso preprod / prod » de `kubernetes.md`)
+- [x] **Tâche 4** Documentation (`secrets.md`, section « Iso preprod / prod » de `kubernetes.md`)
 - [ ] **Tâche 5** Vérification du lot
 
 > Reprise : (vide)
