@@ -81,7 +81,7 @@ rustfs:
     requests:
       memory: 64Mi
     limits:
-      memory: 192Mi
+      memory: 320Mi
   # console web (port 9001) servie par le même pod ; le S3 (9000) reste interne
   console:
     actif: true

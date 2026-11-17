@@ -162,7 +162,7 @@ tests:
           path: spec.template.spec.containers[0].livenessProbe
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
-          value: 192Mi
+          value: 320Mi
       - equal:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: rustfs

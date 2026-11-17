@@ -25,4 +25,5 @@ spec:
     stsIncludeSubdomains: true
     forceSTSHeader: true
     contentTypeNosniff: true
-    frameDeny: true
+    # SAMEORIGIN et non DENY : pgAdmin ouvre ses outils (données, requêtes) dans des iframes de la même origine
+    customFrameOptionsValue: SAMEORIGIN

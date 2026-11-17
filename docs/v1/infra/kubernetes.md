@@ -122,7 +122,7 @@ Limites mémoire des valeurs `values-<env>.yaml` (spec § 5.4), requêtes / limi
 | panel | 32 / 64 Mi | 32 / 64 Mi |
 | PostgreSQL | 384 / 768 Mi | 192 / 384 Mi |
 | Redis | 32 / 128 Mi | 32 / 64 Mi |
-| RustFS | 128 / 256 Mi | 64 / 192 Mi |
+| RustFS | 128 / 512 Mi | 64 / 320 Mi |
 | Job de migrations | 200 / 512 Mi | 128 / 256 Mi |
 | Jobs et CronJob rclone | 32 / 128 Mi | 32 / 128 Mi |
 
