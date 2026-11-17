@@ -29,3 +29,8 @@ restauration-lancer: ## Restaure une sauvegarde déposée dans Wasabi (ENV=<prod
 
 restauration-deposer: ## Dépose une sauvegarde dans Wasabi (ENV=<prod|preprod> DUMP=<fichier> [FICHIERS=<dossier>] DATE=<AAAA-MM-JJ>)
 	@$(POSTE_ENV) RCLONE_IMAGE=$(RCLONE_IMAGE) $(POSTE)/restauration-deposer.sh "$(ENV)" "$(if $(DUMP),$(abspath $(DUMP)))" "$(if $(FICHIERS),$(abspath $(FICHIERS)))" "$(DATE)"
+
+.PHONY: copie-prod-preprod
+
+copie-prod-preprod: ## Copie la base de la prod, anonymisée, vers la preprod ([DATE=<AAAA-MM-JJ>], défaut : jour UTC)
+	@$(POSTE_ENV) $(POSTE)/copie-prod-preprod.sh "$(DATE)"

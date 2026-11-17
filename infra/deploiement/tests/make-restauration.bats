@@ -165,3 +165,56 @@ depose() { # arguments make supplémentaires
   [ "$status" -eq 0 ]
   [[ "$output" == *"restauration-deposer.sh"* ]]
 }
+
+@test "copie-prod-preprod : sans confirmation, ni ssh ni gh" {
+  : > "$CONFIRMATION_TTY"
+  mk copie-prod-preprod DATE=2026-11-17
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"confirmation absente"* ]]
+  [ ! -s "$FAKE_LOG" ]
+  echo preprod > "$CONFIRMATION_TTY"
+  mk copie-prod-preprod DATE=2026-11-17
+  [ "$status" -ne 0 ]
+  [ ! -s "$FAKE_LOG" ]
+}
+
+@test "copie-prod-preprod : deux ssh dans l'ordre, commandes exactes, entrées vides" {
+  echo prod > "$CONFIRMATION_TTY"
+  mk copie-prod-preprod DATE=2026-11-17
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [ "$(grep -c '^ssh ' "$FAKE_LOG")" -eq 2 ]
+  [ "$(grep -c '^STDIN ssh 0$' "$FAKE_LOG")" -eq 2 ]
+  premier="$(grep '^ssh ' "$FAKE_LOG" | sed -n 1p)"
+  second="$(grep '^ssh ' "$FAKE_LOG" | sed -n 2p)"
+  [[ "$premier" == *"urbankiff-deploy-prod"*" deploy@serveur.test.example exporter-anonyme 2026-11-17" ]]
+  [[ "$second" == *"urbankiff-deploy-preprod"*" deploy@serveur.test.example restaurer restauration/2026-11-17-prod-anonyme/" ]]
+}
+
+@test "copie-prod-preprod : la date par défaut est le jour UTC" {
+  echo prod > "$CONFIRMATION_TTY"
+  mk copie-prod-preprod
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  grep -q " exporter-anonyme $(date -u +%F)\$" "$FAKE_LOG"
+}
+
+@test "copie-prod-preprod : l'échec du premier ssh arrête la copie" {
+  echo prod > "$CONFIRMATION_TTY"
+  FAKE_SSH_ECHEC=1 mk copie-prod-preprod DATE=2026-11-17
+  [ "$status" -ne 0 ]
+  [ "$(grep -c '^ssh ' "$FAKE_LOG")" -eq 1 ]
+  absent -q 'restaurer' "$FAKE_LOG"
+}
+
+@test "copie-prod-preprod : l'échec du second ssh est propagé" {
+  echo prod > "$CONFIRMATION_TTY"
+  FAKE_SSH_ECHEC=2 mk copie-prod-preprod DATE=2026-11-17
+  [ "$status" -ne 0 ]
+  [ "$(grep -c '^ssh ' "$FAKE_LOG")" -eq 2 ]
+}
+
+@test "copie-prod-preprod : date mal formée refusée sans appel" {
+  echo prod > "$CONFIRMATION_TTY"
+  mk copie-prod-preprod DATE=2026-1-1
+  [ "$status" -ne 0 ]
+  [ ! -s "$FAKE_LOG" ]
+}
